@@ -1,0 +1,17 @@
+inherit_gem:
+  rubocop-bsm:
+    - default.yml
+inherit_mode:
+  merge:
+    - Exclude
+
+AllCops:
+  TargetRubyVersion: "2.7"
+Layout/LineLength:
+  Max: 200
+Metrics/BlockLength:
+  Enabled: false
+Style/HashEachMethods:
+  Enabled: false
+Naming/FileName:
+  Enabled: false

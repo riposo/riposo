@@ -1,0 +1,40 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: nosecret
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - run: make test
+        env:
+          POSTGRES_DSN: postgres://postgres:nosecret@localhost:5432/postgres?timezone=UTC&sslmode=disable

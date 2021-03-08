@@ -1,0 +1,4 @@
+.rubocop-*yml
+.*.makefile
+bin/
+dist/
