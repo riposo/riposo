@@ -1,0 +1,18 @@
+FROM golang:1.16.2-buster
+
+RUN set -eux; \
+  \
+  apt-get update; \
+  apt-get install -y --no-install-recommends git docker.io gcc-multilib g++-multilib; \
+  rm -rf /var/lib/apt/lists/*
+
+ENV GORELEASER_VERSION=0.159.0
+RUN set -eux; \
+  \
+  curl -sSfL https://github.com/goreleaser/goreleaser/releases/download/v${GORELEASER_VERSION}/goreleaser_Linux_x86_64.tar.gz | tar -xz -C $GOPATH/bin
+
+WORKDIR /app
+COPY . riposo
+RUN set -eux; \
+  \
+  (cd riposo && go mod download -x)
