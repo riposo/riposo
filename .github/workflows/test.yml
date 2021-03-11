@@ -68,17 +68,18 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - working-directory: riposo
-        run: go build -mod=readonly -o riposo cmd/riposo/main.go
+        run: |
+          mkdir -p plugins
+          go build -mod=readonly -o riposo cmd/riposo/main.go
       - working-directory: accounts
-        run: go build -mod=readonly -o plugin.so -buildmode=plugin .
+        run: go build -mod=readonly -o ../riposo/plugins/accounts.so -buildmode=plugin .
       - working-directory: flush
-        run: go build -mod=readonly -o plugin.so -buildmode=plugin .
+        run: go build -mod=readonly -o ../riposo/plugins/flush.so -buildmode=plugin .
       - working-directory: riposo
         run: "./riposo server &"
         env:
           RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
           RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
-          RIPOSO_PLUGIN_DIR: "../accounts/,../flush"
       - uses: ruby/setup-ruby@v1
         with:
           working-directory: riposo

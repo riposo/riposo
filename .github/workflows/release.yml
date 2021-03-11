@@ -1,0 +1,86 @@
+name: Release
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  build_env:
+    runs-on: ubuntu-latest
+    outputs:
+      version-without-v: ${{ steps.get_version.outputs.version-without-v }}
+    steps:
+      - name: Extract Version
+        id: get_version
+        uses: battila7/get-version-action@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          file: build-env/Dockerfile
+          tags: ghcr.io/riposo/build-env:${{ steps.get_version.outputs.version-without-v }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+      - # Temp fix
+        # https://github.com/docker/build-push-action/issues/252
+        # https://github.com/moby/buildkit/issues/1896
+        name: Fix cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+  release:
+    runs-on: ubuntu-latest
+    needs: build_env
+    container:
+      image: ghcr.io/riposo/build-env:${{ needs.build_env.outputs.version-without-v }}
+      options: --privileged --entrypoint /bin/bash
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.PAT }}
+      env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - name: Install Dependencies
+        run: |
+          curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian buster stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update
+          apt-get install -y --no-install-recommends git docker-ce docker-ce-cli gcc-multilib g++-multilib
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub Contrainer Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          workdir: /riposo
+          version: latest
+          args: release --rm-dist --skip-validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
