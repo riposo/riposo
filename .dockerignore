@@ -1,0 +1,6 @@
+.*.makefile
+bin/
+dist/
+**/*_test.go
+**/testdata/
+.github/

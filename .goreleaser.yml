@@ -22,9 +22,9 @@ dockers:
       - riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}
       - riposo/riposo:{{ .Major }}.{{ .Minor }}
       - riposo/riposo:latest
-      - docker.pkg.github.com/riposo/riposo/server:{{ .Major }}.{{ .Minor }}.{{ .Patch }}
-      - docker.pkg.github.com/riposo/riposo/server:{{ .Major }}.{{ .Minor }}
-      - docker.pkg.github.com/riposo/riposo/server:latest
+      - ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+      - ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/riposo/riposo:latest
     build_flag_templates:
       - "--pull"
       - "--label=org.opencontainers.image.created={{.Date}}"
