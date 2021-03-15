@@ -34,6 +34,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
+          context: .
           push: true
           file: Dockerfile.build-env
           tags: ghcr.io/riposo/build-env:${{ steps.get_version.outputs.version-without-v }}
@@ -68,6 +69,6 @@ jobs:
           password: ${{ secrets.PAT }}
       - name: Run GoReleaser
         working-directory: /app/riposo
-        run: goreleaser release --rm-dist
+        run: goreleaser release --rm-dist --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
