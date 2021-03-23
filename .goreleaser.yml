@@ -1,7 +1,6 @@
 project_name: riposo
 builds:
-  - id: riposo_linux
-    binary: riposo
+  - binary: riposo
     main: cmd/riposo/main.go
     env:
       - CGO_ENABLED=1
