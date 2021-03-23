@@ -52,7 +52,7 @@ jobs:
     needs: build_env
     container:
       image: ghcr.io/riposo/build-env:${{ needs.build_env.outputs.version-without-v }}
-      options: --privileged --entrypoint /bin/bash
+      options: --privileged
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.PAT }}

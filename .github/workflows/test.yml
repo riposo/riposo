@@ -25,19 +25,35 @@ jobs:
       matrix:
         go-version: [1.16.x]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - name: Fetch staticcheck
+        uses: engineerd/configurator@v0.0.6
+        with:
+          name: staticcheck
+          fromGitHubReleases: true
+          repo: dominikh/go-tools
+          version: latest
+          urlTemplate: "https://github.com/dominikh/go-tools/releases/download/2020.2.3/staticcheck_linux_amd64.tar.gz"
+          pathInArchive: staticcheck/staticcheck
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Cache modules
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-      - run: make test
+      - name: Run tests
+        run: make test
         env:
           POSTGRES_DSN: postgres://postgres:nosecret@localhost:5432/postgres?timezone=UTC&sslmode=disable
+      - name: Run staticcheck
+        run: make staticcheck
   integration:
     runs-on: ubuntu-latest
     strategy:
@@ -45,45 +61,56 @@ jobs:
         go-version: [1.16.x]
         ruby-version: ["2.7"]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout core
+        uses: actions/checkout@v2
         with:
           path: riposo
-      - uses: actions/checkout@v2
+      - name: Checkout accounts plugin
+        uses: actions/checkout@v2
         with:
           repository: riposo/accounts
           path: accounts
           token: ${{ secrets.PAT }}
-      - uses: actions/checkout@v2
+      - name: Checkout flush plugin
+        uses: actions/checkout@v2
         with:
           repository: riposo/flush
           path: flush
           token: ${{ secrets.PAT }}
-      - uses: actions/cache@v2
+      - name: Cache modules
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-      - working-directory: riposo
+      - name: Build core
+        working-directory: riposo
         run: |
           mkdir -p plugins
           go build -mod=readonly -o riposo cmd/riposo/main.go
-      - working-directory: accounts
+      - name: Build accounts plugin
+        working-directory: accounts
         run: go build -mod=readonly -o ../riposo/plugins/accounts.so -buildmode=plugin .
-      - working-directory: flush
+      - name: Build flush plugin
+        working-directory: flush
         run: go build -mod=readonly -o ../riposo/plugins/flush.so -buildmode=plugin .
-      - working-directory: riposo
+      - name: Start server
+        working-directory: riposo
         run: "./riposo server &"
         env:
           RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
           RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
-      - uses: ruby/setup-ruby@v1
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
         with:
           working-directory: riposo
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
-      - working-directory: riposo
+      - name: Run tests
+        working-directory: riposo
         run: bundle exec rspec -fd
