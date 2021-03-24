@@ -8,6 +8,7 @@ import (
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/mock"
+	"github.com/riposo/riposo/pkg/plugin"
 )
 
 // NewMux inits a new handler for tests.
@@ -23,7 +24,7 @@ func NewMux() http.Handler {
 	cfg.Pagination.MaxLimit = 3
 	cfg.Pagination.TokenValidity = time.Hour
 	cfg.EOS.Time = time.Unix(2424242424, 0)
-	cfg.Capabilities = make(map[string]map[string]interface{})
+	cfg.Capabilities = new(plugin.Set)
 
 	rts := api.NewRoutes(cfg.APIConfig())
 	rts.Resource("/buckets", api.StdModel())

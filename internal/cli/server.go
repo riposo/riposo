@@ -21,15 +21,16 @@ func (*serverCmd) Usage() string            { return "server:\n  Start HTTP serv
 func (*serverCmd) SetFlags(_ *flag.FlagSet) {}
 
 func (c *serverCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	return statusOf(c.run(ctx))
-}
-
-func (c *serverCmd) run(ctx context.Context) error {
 	cfg, err := config.Parse()
 	if err != nil {
-		return usageErrorf("invalid configuration: %v", err)
+		failure("invalid configuration: " + err.Error())
+		return subcommands.ExitUsageError
 	}
 
+	return exitStatus(c.run(cfg, ctx))
+}
+
+func (c *serverCmd) run(cfg *config.Config, ctx context.Context) error {
 	term := shutdown.WithContext(ctx)
 	srv, err := server.New(term, cfg)
 	if err != nil {

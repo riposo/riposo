@@ -11,6 +11,7 @@ import (
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/conn"
+	"github.com/riposo/riposo/pkg/plugin"
 	"github.com/riposo/riposo/pkg/riposo"
 	"go.uber.org/multierr"
 )
@@ -37,16 +38,12 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 	rts.Resource("/buckets/{bucket_id}/collections", api.StdModel())
 	rts.Resource("/buckets/{bucket_id}/collections/{collection_id}/records", api.StdModel())
 
-	// fetch plugins
-	if err := cfg.FetchPlugins(); err != nil {
-		return nil, err
-	}
-
 	// init plugins
-	plugins, err := cfg.LoadPlugins(rts)
+	plugins, err := plugin.Init(rts)
 	if err != nil {
 		return nil, err
 	}
+	cfg.Capabilities = plugins
 
 	// init auth
 	auth, err := initAuth(cfg, hlp)
@@ -57,8 +54,8 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 
 	cns, err := establishConns(ctx, cfg, hlp)
 	if err != nil {
-		_ = plugins.Close()
 		_ = auth.Close()
+		_ = plugins.Close()
 		return nil, err
 	}
 

@@ -7,7 +7,7 @@ on:
     branches:
       - main
 jobs:
-  unit:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -54,63 +54,3 @@ jobs:
           POSTGRES_DSN: postgres://postgres:nosecret@localhost:5432/postgres?timezone=UTC&sslmode=disable
       - name: Run staticcheck
         run: make staticcheck
-  integration:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [1.16.x]
-        ruby-version: ["2.7"]
-    steps:
-      - name: Checkout core
-        uses: actions/checkout@v2
-        with:
-          path: riposo
-      - name: Checkout accounts plugin
-        uses: actions/checkout@v2
-        with:
-          repository: riposo/accounts
-          path: accounts
-          token: ${{ secrets.PAT }}
-      - name: Checkout flush plugin
-        uses: actions/checkout@v2
-        with:
-          repository: riposo/flush
-          path: flush
-          token: ${{ secrets.PAT }}
-      - name: Cache modules
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Build core
-        working-directory: riposo
-        run: |
-          mkdir -p plugins
-          go build -mod=readonly -o riposo cmd/riposo/main.go
-      - name: Build accounts plugin
-        working-directory: accounts
-        run: go build -mod=readonly -o ../riposo/plugins/accounts.so -buildmode=plugin .
-      - name: Build flush plugin
-        working-directory: flush
-        run: go build -mod=readonly -o ../riposo/plugins/flush.so -buildmode=plugin .
-      - name: Start server
-        working-directory: riposo
-        run: "./riposo server &"
-        env:
-          RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
-          RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
-      - name: Setup ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          working-directory: riposo
-          ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
-      - name: Run tests
-        working-directory: riposo
-        run: bundle exec rspec -fd
