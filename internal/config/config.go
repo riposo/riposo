@@ -1,13 +1,12 @@
 package config
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/riposo/riposo/pkg/api"
+	"github.com/riposo/riposo/pkg/plugin"
 	"github.com/riposo/riposo/pkg/riposo"
 )
 
@@ -56,11 +55,6 @@ type Config struct {
 		ShutdownTimeout time.Duration `default:"5s" split_words:"true"`
 	}
 
-	Plugin struct {
-		Dir  []string `default:"./plugins"`
-		URLs []string
-	}
-
 	Temp struct {
 		Dir string
 	}
@@ -72,84 +66,21 @@ type Config struct {
 		URL     string
 	}
 
-	Capabilities map[string]map[string]interface{} `ignored:"true"`
+	Plugins      []string
+	Capabilities *plugin.Set `ignored:"true"`
 }
 
 // Parse parses the config from environment.
 func Parse() (*Config, error) {
 	var c Config
 	c.Project.Version = riposo.Version
-	c.Capabilities = make(map[string]map[string]interface{})
+	c.Capabilities = new(plugin.Set)
 
 	if err := riposo.ParseEnv(&c); err != nil {
 		return nil, err
 	}
 
 	return &c, nil
-}
-
-// FetchPlugins downloads plugins.
-func (c *Config) FetchPlugins() error {
-	if len(c.Plugin.URLs) == 0 {
-		return nil
-	}
-
-	tempDir := c.Temp.Dir
-	if tempDir == "" {
-		tempDir = os.TempDir()
-	}
-	pluginDir := filepath.Join(tempDir, "riposo-plugins")
-	for _, url := range c.Plugin.URLs {
-		riposo.Logger.Println("fetching plugin", url)
-		if err := safeDownload(url, pluginDir); err != nil {
-			return err
-		}
-	}
-
-	c.Plugin.Dir = append(c.Plugin.Dir, pluginDir)
-	return nil
-}
-
-// LoadPlugins includes plugins.
-func (c *Config) LoadPlugins(rts *api.Routes) (Plugins, error) {
-	filesSeen := make(map[string]struct{})
-	var plugins Plugins
-
-	for _, dir := range c.Plugin.Dir {
-		files, err := filepath.Glob(filepath.Join(dir, "*.so"))
-		if err != nil {
-			_ = plugins.Close()
-			return nil, err
-		}
-		for _, fname := range files {
-			if _, ok := filesSeen[fname]; ok {
-				continue
-			}
-			filesSeen[fname] = struct{}{}
-
-			pft, err := LoadPlugin(fname)
-			if err != nil {
-				_ = plugins.Close()
-				return nil, err
-			}
-
-			pin, err := pft(rts)
-			if err != nil {
-				_ = plugins.Close()
-				return nil, err
-			}
-
-			plugins = append(plugins, pin)
-			if _, ok := c.Capabilities[pin.ID()]; ok {
-				_ = plugins.Close()
-				return nil, fmt.Errorf("plugin: %q is already registered (%s)", pin.ID(), fname)
-			}
-			c.Capabilities[pin.ID()] = pin.Meta()
-
-			riposo.Logger.Printf("loaded plugin %q (%s)", pin.ID(), fname)
-		}
-	}
-	return plugins, nil
 }
 
 // APIConfig returns an API config.

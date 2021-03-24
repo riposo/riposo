@@ -6,8 +6,9 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
-  unit:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -54,6 +55,7 @@ jobs:
           POSTGRES_DSN: postgres://postgres:nosecret@localhost:5432/postgres?timezone=UTC&sslmode=disable
       - name: Run staticcheck
         run: make staticcheck
+
   integration:
     runs-on: ubuntu-latest
     strategy:
@@ -61,22 +63,21 @@ jobs:
         go-version: [1.16.x]
         ruby-version: ["2.7"]
     steps:
+      - name: Checkout composer
+        uses: actions/checkout@v2
+        with:
+          repository: riposo/composer
+          token: ${{ secrets.PAT }}
       - name: Checkout core
         uses: actions/checkout@v2
         with:
           path: riposo
-      - name: Checkout accounts plugin
-        uses: actions/checkout@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
         with:
-          repository: riposo/accounts
-          path: accounts
-          token: ${{ secrets.PAT }}
-      - name: Checkout flush plugin
-        uses: actions/checkout@v2
-        with:
-          repository: riposo/flush
-          path: flush
-          token: ${{ secrets.PAT }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
       - name: Cache modules
         uses: actions/cache@v2
         with:
@@ -84,27 +85,16 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: Build core
-        working-directory: riposo
-        run: |
-          mkdir -p plugins
-          go build -mod=readonly -o riposo cmd/riposo/main.go
-      - name: Build accounts plugin
-        working-directory: accounts
-        run: go build -mod=readonly -o ../riposo/plugins/accounts.so -buildmode=plugin .
-      - name: Build flush plugin
-        working-directory: flush
-        run: go build -mod=readonly -o ../riposo/plugins/flush.so -buildmode=plugin .
+      - name: Build server
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: ./build.sh --plugins accounts,flush --source ./riposo
       - name: Start server
-        working-directory: riposo
         run: "./riposo server &"
         env:
           RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
           RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
+          RIPOSO_PLUGINS: accounts,flush
       - name: Setup ruby
         uses: ruby/setup-ruby@v1
         with:
