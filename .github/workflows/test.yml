@@ -63,21 +63,23 @@ jobs:
         go-version: [1.16.x]
         ruby-version: ["2.7"]
     steps:
-      - name: Checkout composer
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Checkout CMD
         uses: actions/checkout@v2
         with:
-          repository: riposo/composer
+          path: cmd
+          repository: riposo/cmd
           token: ${{ secrets.PAT }}
-      - name: Checkout core
-        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
-          path: riposo
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+          go-version: ${{ matrix.go-version }}
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.PAT }}
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
       - name: Cache modules
         uses: actions/cache@v2
         with:
@@ -86,21 +88,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Build server
+        working-directory: cmd
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
-        run: ./build.sh --plugins accounts,flush --source ./riposo
+        run: |
+          ./build.sh --plugins accounts,flush --source ../ -o ../riposo
       - name: Start server
-        run: "./riposo server &"
+        run: |
+          ./riposo server &
         env:
           RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
           RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
           RIPOSO_PLUGINS: accounts,flush
-      - name: Setup ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          working-directory: riposo
-          ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
       - name: Run tests
-        working-directory: riposo
         run: bundle exec rspec -fd
