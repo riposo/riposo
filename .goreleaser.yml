@@ -1,0 +1,81 @@
+project_name: riposo
+builds:
+  - binary: riposo
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+checksum:
+  name_template: "checksums.txt"
+changelog:
+  skip: true
+dockers:
+  - goarch: amd64
+    image_templates:
+      - riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+      - ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+    use_buildx: true
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+  - goarch: arm64
+    image_templates:
+      - riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+      - ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+    use_buildx: true
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+docker_manifests:
+  - name_template: "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+    image_templates:
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+  - name_template: "riposo/riposo:{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+  - name_template: "riposo/riposo:latest"
+    image_templates:
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+  - name_template: "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+    image_templates:
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+  - name_template: "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+  - name_template: "ghcr.io/riposo/riposo:latest"
+    image_templates:
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "ghcr.io/riposo/riposo:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    replacements:
+      386: i386
+      amd64: x86_64
+snapshot:
+  name_template: "{{ .Tag }}-next"
