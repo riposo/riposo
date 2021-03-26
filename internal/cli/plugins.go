@@ -21,7 +21,7 @@ func (*pluginsCmd) SetFlags(_ *flag.FlagSet) {}
 
 func (c *pluginsCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	plugin.EachMeta(func(id string, meta map[string]interface{}) {
-		fprintf(os.Stdout, "* %s", id)
+		fprintf(os.Stdout, "%s:", id)
 		for key, val := range meta {
 			fprintf(os.Stdout, "  %s: %v", key, val)
 		}

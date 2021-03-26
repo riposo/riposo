@@ -113,7 +113,7 @@ Plugins can be loaded at runtime by referencing them via `RIPOSO_PLUGINS` enviro
 * [default-bucket](https://github.com/riposo/default-bucket)
 * [flush](https://github.com/riposo/flush)
 
-To build a custom release with additional plugins, please see instructions on the [Composer](https://github.com/riposo/composer) page. More plugins are available on [GitHub](https://github.com/riposo?q=topic%3Aplugin).
+To build a custom release with additional plugins, please see instructions on the [cmd](https://github.com/riposo/cmd) page. More plugins are available on [GitHub](https://github.com/riposo?q=topic%3Aplugin).
 
 ## License
 

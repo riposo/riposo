@@ -25,4 +25,4 @@ build: bin/riposo
 
 bin/riposo: go.mod go.sum $(shell find . -name '*.go')
 	@mkdir -p $(dir $@)
-	go build -ldflags '-s -w' -o $@ cmd/riposo/main.go
+	go build -ldflags '-s -w' -o $@ cmd/riposo/*.go
