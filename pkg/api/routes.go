@@ -60,6 +60,8 @@ func (r *Routes) Resource(prefix string, model Model) {
 	}
 
 	r.mux.Route(prefix, func(ns chi.Router) {
+		ns.Use(middleware.WithValue(modelKey{}, model))
+
 		ns.Method(http.MethodGet, "/", HandlerFunc(c.List))
 		ns.Method(http.MethodHead, "/", HandlerFunc(c.Count))
 		ns.Method(http.MethodDelete, "/", HandlerFunc(c.DeleteBulk))

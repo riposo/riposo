@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
@@ -27,6 +29,16 @@ type model struct{}
 // StdModel inits a standard model.
 func StdModel() Model {
 	return model{}
+}
+
+type modelKey struct{}
+
+// GetModel extracts the model from the request.
+func GetModel(req *http.Request) Model {
+	if v := req.Context().Value(modelKey{}); v != nil {
+		return v.(Model)
+	}
+	return nil
 }
 
 func (model) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
