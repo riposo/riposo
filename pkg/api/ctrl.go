@@ -232,11 +232,6 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 		}
 	}
 
-	// include current user as writer
-	if payload.Permissions != nil && req.Txn.User.ID != riposo.Everyone {
-		payload.Permissions.Add("write", req.Txn.User.ID)
-	}
-
 	// update resource & permissions
 	if err := c.mod.Update(req.Txn, req.Path, hs, &payload); err != nil {
 		return err
@@ -305,11 +300,6 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	exst := hs.Object()
 	if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 		return err
-	}
-
-	// include current user as writer
-	if payload.Permissions != nil && req.Txn.User.ID != riposo.Everyone {
-		payload.Permissions.Add("write", req.Txn.User.ID)
 	}
 
 	// patch resource & permissions
@@ -585,15 +575,6 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 	// check if parent exists
 	if err := c.checkParent(req); err != nil {
 		return err
-	}
-
-	// ensure permissions are not nil
-	if payload.Permissions == nil {
-		payload.Permissions = make(schema.PermissionSet)
-	}
-	// include current user as writer
-	if req.Txn.User.ID != riposo.Everyone {
-		payload.Permissions.Add("write", req.Txn.User.ID)
 	}
 
 	// create resource, try 'get' if exists

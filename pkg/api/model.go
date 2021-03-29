@@ -52,11 +52,14 @@ func (model) Create(txn *Txn, path riposo.Path, payload *schema.Resource) error 
 		return err
 	}
 
-	// skip if no permissions provided
+	// ensure permissions are not nil
 	if payload.Permissions == nil {
-		return nil
+		payload.Permissions = make(schema.PermissionSet, 1)
 	}
-
+	// include current user as writer
+	if user := txn.User; user != nil && user.ID != riposo.Everyone {
+		payload.Permissions.Add("write", user.ID)
+	}
 	// create permissions using ID
 	return txn.Perms.CreatePermissions(path.WithObjectID(payload.Data.ID), payload.Permissions)
 }
@@ -109,6 +112,10 @@ func update(txn *Txn, hs storage.UpdateHandle, path riposo.Path, ps schema.Permi
 
 	// update permissions
 	if ps != nil {
+		// include current user as writer
+		if user := txn.User; user != nil && user.ID != riposo.Everyone {
+			ps.Add("write", user.ID)
+		}
 		if err := txn.Perms.MergePermissions(path, ps); err != nil {
 			return err
 		}
