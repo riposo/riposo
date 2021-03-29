@@ -13,6 +13,7 @@ func (p PermissionSet) Add(perm, principal string) {
 			return
 		}
 	}
+
 	perms = append(perms, principal)
 	sort.Strings(perms)
 	p[perm] = perms

@@ -171,6 +171,12 @@ func (o *Object) Patch(x *Object) error {
 	return o.EncodeExtra(m1)
 }
 
+// String implements Stringer interface.
+func (o *Object) String() string {
+	bin, _ := o.MarshalJSON()
+	return string(bin)
+}
+
 func recPatch(o1, o2 map[string]interface{}) {
 	for key, v2 := range o2 {
 		if v2 == nil {

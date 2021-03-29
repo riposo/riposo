@@ -17,13 +17,13 @@ var _ = Describe("Model", func() {
 
 	resource := func() *schema.Resource {
 		return &schema.Resource{
-			Data:        &schema.Object{Extra: []byte(`{"meta":true}`)},
-			Permissions: schema.PermissionSet{"write": {"alice"}},
+			Data: &schema.Object{Extra: []byte(`{"meta":true}`)},
 		}
 	}
 
 	BeforeEach(func() {
 		txn = mock.Txn()
+		txn.User = mock.User("alice")
 		subject = api.StdModel()
 	})
 
@@ -49,18 +49,14 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"meta":true}`),
 			}))
 			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(BeEmpty())
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{"write": {"alice"}}))
 		})
 
 		It("creates with permissions", func() {
 			obj := &schema.Object{Extra: []byte(`{"meta":true}`)}
-			pms := schema.PermissionSet{
-				"write": {"alice", "claire"},
-				"read":  {"bob"},
-			}
 			Expect(subject.Create(txn, "/objects/*", &schema.Resource{
 				Data:        obj,
-				Permissions: pms,
+				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
 			Expect(obj).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
@@ -68,7 +64,10 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"meta":true}`),
 			}))
 			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(pms))
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
+				"write": {"alice", "claire"},
+				"read":  {"bob"},
+			}))
 		})
 	})
 
@@ -100,10 +99,9 @@ var _ = Describe("Model", func() {
 		})
 
 		It("updates with permissions", func() {
-			pms := schema.PermissionSet{"write": {"alice"}, "read": {"bob"}}
 			Expect(subject.Update(txn, "/objects/EPR.ID", hs, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"updated":true}`)},
-				Permissions: pms,
+				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
 
 			Expect(hs.Object()).To(Equal(&schema.Object{
@@ -112,7 +110,10 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"updated":true}`),
 			}))
 			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(pms))
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
+				"write": {"alice", "claire"},
+				"read":  {"bob"},
+			}))
 		})
 	})
 
@@ -146,10 +147,9 @@ var _ = Describe("Model", func() {
 		})
 
 		It("patches with permissions", func() {
-			pms := schema.PermissionSet{"write": {"alice"}, "read": {"bob"}}
 			Expect(subject.Patch(txn, "/objects/EPR.ID", hs, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"b":4,"c":3}`)},
-				Permissions: pms,
+				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
 
 			Expect(hs.Object()).To(Equal(&schema.Object{
@@ -158,7 +158,10 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"a":1,"b":4,"c":3}`),
 			}))
 			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(pms))
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
+				"write": {"alice", "claire"},
+				"read":  {"bob"},
+			}))
 		})
 	})
 
