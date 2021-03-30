@@ -13,11 +13,11 @@ type modGroup struct{ api.Model }
 
 // Model inits a new group model.
 func Model() api.Model {
-	return &modGroup{Model: api.StdModel()}
+	return modGroup{Model: api.StdModel()}
 }
 
 // Create overrides.
-func (m *modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) error {
+func (m modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -39,7 +39,7 @@ func (m *modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resour
 }
 
 // Update overrides.
-func (m *modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -66,7 +66,7 @@ func (m *modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandl
 }
 
 // Patch overrides.
-func (m *modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	_, err := normGroup(payload.Data, false)
 	if err != nil {
@@ -99,7 +99,7 @@ func (m *modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle
 }
 
 // Delete overrides.
-func (m *modGroup) Delete(txn *api.Txn, path riposo.Path) (*schema.Object, error) {
+func (m modGroup) Delete(txn *api.Txn, path riposo.Path) (*schema.Object, error) {
 	principal := path.String()
 
 	// purge principal
@@ -112,7 +112,7 @@ func (m *modGroup) Delete(txn *api.Txn, path riposo.Path) (*schema.Object, error
 }
 
 // DeleteAll deletes resources in bulk.
-func (m *modGroup) DeleteAll(txn *api.Txn, path riposo.Path, objIDs ...string) (riposo.Epoch, error) {
+func (m modGroup) DeleteAll(txn *api.Txn, path riposo.Path, objIDs ...string) (riposo.Epoch, error) {
 	if len(objIDs) != 0 {
 		// purge principals
 		principals := make([]string, 0, len(objIDs))

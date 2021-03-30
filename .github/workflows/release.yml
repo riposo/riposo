@@ -8,8 +8,6 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      GOPRIVATE: github.com/riposo
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -50,9 +48,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Grant private modules access
-        run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@${{ env.GOPRIVATE }}".insteadOf "https://${{ env.GOPRIVATE }}"
       - name: Prepare build
         run: |
           rm -rf cmd/riposo/.git*
