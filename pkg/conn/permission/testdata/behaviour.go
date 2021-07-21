@@ -79,7 +79,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 
 		Ω.Expect(tx.RemoveUserPrincipal("a", []string{"alice", "claire"})).To(Ω.Succeed())
 		Ω.Expect(tx.RemoveUserPrincipal("x", []string{"alice"})).To(Ω.Succeed())
-		Ω.Expect(tx.PurgeUserPrincipals()).To(Ω.Succeed()) // deletes nothing
+		Ω.Expect(tx.PurgeUserPrincipals(nil)).To(Ω.Succeed()) // deletes nothing
 		Ω.Expect(tx.GetUserPrincipals("alice")).To(Ω.ConsistOf(
 			"b", "c",
 			"alice", riposo.Authenticated, riposo.Everyone,
@@ -88,7 +88,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 			"claire", riposo.Authenticated, riposo.Everyone,
 		))
 
-		Ω.Expect(tx.PurgeUserPrincipals("b", "x")).To(Ω.Succeed())
+		Ω.Expect(tx.PurgeUserPrincipals([]string{"b", "x"})).To(Ω.Succeed())
 		Ω.Expect(tx.GetUserPrincipals("alice")).To(Ω.ConsistOf(
 			"c",
 			"alice", riposo.Authenticated, riposo.Everyone,
@@ -98,7 +98,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 			"bob", riposo.Authenticated, riposo.Everyone,
 		))
 
-		Ω.Expect(tx.PurgeUserPrincipals("a", "c")).To(Ω.Succeed())
+		Ω.Expect(tx.PurgeUserPrincipals([]string{"a", "c"})).To(Ω.Succeed())
 		Ω.Expect(tx.GetUserPrincipals("alice")).To(Ω.ConsistOf(
 			"alice", riposo.Authenticated, riposo.Everyone,
 		))
@@ -256,18 +256,18 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.AddACEPrincipal("x", ACE("write", "/buckets/cc"))).To(Ω.Succeed())
 		Ω.Expect(tx.AddACEPrincipal("x", ACE("write", "/buckets/z/collections/x"))).To(Ω.Succeed())
 
-		Ω.Expect(tx.DeletePermissions("/buckets/a", "/buckets/b", "/buckets/z")).To(Ω.Succeed())
+		Ω.Expect(tx.DeletePermissions([]riposo.Path{"/buckets/a", "/buckets/b", "/buckets/z"})).To(Ω.Succeed())
 		Ω.Expect(tx.GetPermissions("/buckets/a")).To(MatchPermissions(nil))
 		Ω.Expect(tx.GetPermissions("/buckets/b")).To(MatchPermissions(nil))
 		Ω.Expect(tx.GetPermissions("/buckets/c")).To(Ω.HaveLen(1))
 		Ω.Expect(tx.GetPermissions("/buckets/z/collections/x")).To(MatchPermissions(nil))
 
-		Ω.Expect(tx.DeletePermissions()).To(Ω.Succeed())
+		Ω.Expect(tx.DeletePermissions(nil)).To(Ω.Succeed())
 		Ω.Expect(tx.GetPermissions("/buckets/c")).To(Ω.HaveLen(1))
 		Ω.Expect(tx.GetPermissions("/buckets/c/collections/x")).To(Ω.HaveLen(1))
 		Ω.Expect(tx.GetPermissions("/buckets/cc")).To(Ω.HaveLen(1))
 
-		Ω.Expect(tx.DeletePermissions("/buckets/c")).To(Ω.Succeed())
+		Ω.Expect(tx.DeletePermissions([]riposo.Path{"/buckets/c"})).To(Ω.Succeed())
 		Ω.Expect(tx.GetPermissions("/buckets/c")).To(MatchPermissions(nil))
 		Ω.Expect(tx.GetPermissions("/buckets/c/collections/x")).To(MatchPermissions(nil))
 		Ω.Expect(tx.GetPermissions("/buckets/cc")).To(Ω.HaveLen(1))

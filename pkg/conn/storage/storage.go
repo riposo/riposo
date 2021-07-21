@@ -55,7 +55,7 @@ type Transaction interface {
 	CountAll(node riposo.Path, opt CountOptions) (int64, error)
 	// DeleteAll recursively deletes given paths and returns the
 	// maximum modTime of the deleted objects.
-	DeleteAll(paths ...riposo.Path) (riposo.Epoch, error)
+	DeleteAll(paths []riposo.Path) (riposo.Epoch, error)
 
 	// Exists returns true if a path exists.
 	// Accepts elementary paths only.

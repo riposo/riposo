@@ -28,8 +28,9 @@ func newRequest(req *http.Request) *request {
 }
 
 type controller struct {
-	mod Model
-	cfg *Config
+	mod   Model
+	hooks *Hooks
+	cfg   *Config
 }
 
 func (c *controller) List(out http.Header, r *http.Request) interface{} {
@@ -134,8 +135,15 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		objIDs.S = append(objIDs.S, obj.ID)
 	}
 
+	// run before hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.BeforeDeleteAll(req.Txn, req.Path, objIDs.S)
+	}); err != nil {
+		return err
+	}
+
 	// delete resources
-	modTime, err := c.mod.DeleteAll(req.Txn, req.Path, objIDs.S...)
+	modTime, err := c.mod.DeleteAll(req.Txn, req.Path, objIDs.S)
 	if err != nil {
 		return err
 	}
@@ -146,6 +154,14 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		obj.ModTime = modTime
 	}
 
+	// run after hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.AfterDeleteAll(req.Txn, req.Path, objIDs.S, modTime)
+	}); err != nil {
+		return err
+	}
+
+	// set headers + respond
 	setCacheHeaders(out, req.HTTP, modTime)
 	return &schema.Objects{Data: objs}
 }
@@ -232,6 +248,13 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 		}
 	}
 
+	// run before hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.BeforeUpdate(req.Txn, req.Path, hs.Object(), &payload)
+	}); err != nil {
+		return err
+	}
+
 	// update resource & permissions
 	if err := c.mod.Update(req.Txn, req.Path, hs, &payload); err != nil {
 		return err
@@ -243,8 +266,17 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// prepare response + set headers
+	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
+
+	// run after hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.AfterUpdate(req.Txn, req.Path, res)
+	}); err != nil {
+		return err
+	}
+
+	// set headers + respond
 	setCacheHeaders(out, req.HTTP, res.Data.ModTime)
 	return res
 }
@@ -302,6 +334,13 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
+	// run before hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.BeforePatch(req.Txn, req.Path, hs.Object(), &payload)
+	}); err != nil {
+		return err
+	}
+
 	// patch resource & permissions
 	if err := c.mod.Patch(req.Txn, req.Path, hs, &payload); err != nil {
 		return err
@@ -313,8 +352,17 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// prepare response + set headers
+	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
+
+	// run after hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.AfterPatch(req.Txn, req.Path, res)
+	}); err != nil {
+		return err
+	}
+
+	// set headers + respond
 	setCacheHeaders(out, req.HTTP, res.Data.ModTime)
 	return res
 }
@@ -351,13 +399,27 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
+	// run before hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.BeforeDelete(req.Txn, req.Path, exst)
+	}); err != nil {
+		return err
+	}
+
 	// delete resource
-	deleted, err := c.mod.Delete(req.Txn, req.Path)
+	deleted, err := c.mod.Delete(req.Txn, req.Path, exst)
 	if err != nil {
 		return err
 	}
 
-	// respond
+	// run after hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.AfterDelete(req.Txn, req.Path, deleted)
+	}); err != nil {
+		return err
+	}
+
+	// set headers + respond
 	setCacheHeaders(out, req.HTTP, deleted.ModTime)
 	return &schema.Resource{Data: deleted}
 }
@@ -577,12 +639,26 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 		return err
 	}
 
+	// run before hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.BeforeCreate(req.Txn, req.Path, payload)
+	}); err != nil {
+		return err
+	}
+
 	// create resource, try 'get' if exists
 	err := c.mod.Create(req.Txn, req.Path, payload)
 	if err == storage.ErrObjectExists && payload.Data.ID != "" {
 		req.Path = req.Path.WithObjectID(payload.Data.ID)
 		return c.doGet(out, req)
 	} else if err != nil {
+		return err
+	}
+
+	// run after hooks
+	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
+		return h.AfterCreate(req.Txn, req.Path, payload)
+	}); err != nil {
 		return err
 	}
 

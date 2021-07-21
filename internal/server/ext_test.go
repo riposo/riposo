@@ -27,7 +27,7 @@ func NewMux() http.Handler {
 	cfg.Capabilities = new(plugin.Set)
 
 	rts := api.NewRoutes(cfg.APIConfig())
-	rts.Resource("/buckets", api.StdModel())
+	rts.Resource("/buckets", nil)
 
 	return newMux(rts, cns, hlp, cfg, mockAuth{})
 }

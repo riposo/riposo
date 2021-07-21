@@ -34,10 +34,10 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 
 	// init routes, install resources
 	rts := api.NewRoutes(cfg.APIConfig())
-	rts.Resource("/buckets", api.StdModel())
-	rts.Resource("/buckets/{bucket_id}/groups", group.Model())
-	rts.Resource("/buckets/{bucket_id}/collections", api.StdModel())
-	rts.Resource("/buckets/{bucket_id}/collections/{collection_id}/records", api.StdModel())
+	rts.Resource("/buckets", nil)
+	rts.Resource("/buckets/{bucket_id}/groups", group.Model{})
+	rts.Resource("/buckets/{bucket_id}/collections", nil)
+	rts.Resource("/buckets/{bucket_id}/collections/{collection_id}/records", nil)
 
 	// init plugins
 	plugins, err := plugin.Init(rts, cfg.Plugins)

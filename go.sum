@@ -2,6 +2,8 @@ github.com/alexedwards/argon2id v0.0.0-20210511081203-7d35d68092b8 h1:ZtMr6/tt7V
 github.com/alexedwards/argon2id v0.0.0-20210511081203-7d35d68092b8/go.mod h1:Kmn5t2Rb93Q4NTprN4+CCgARGvigKMJyxP0WckpTUp0=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
+github.com/bmatcuk/doublestar/v4 v4.0.2 h1:X0krlUVAVmtr2cRoTqR8aDMrDqnB36ht8wpWTiQ3jsA=
+github.com/bmatcuk/doublestar/v4 v4.0.2/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/bsm/minisql v0.1.0 h1:fjujK/d6mDlkM0g07wXZHkrRFWhoS3EIssi3fJJfPs4=
 github.com/bsm/minisql v0.1.0/go.mod h1:QTh7gDe1VmsDHFhWIrQUUla7Nqxjy1zJc0jG43V7yn0=
 github.com/bsm/nanoid v0.1.0 h1:hq3k4KKQc9d1kb3KqGSIKZUcNkj/GDLTrkMWf1tdCSw=

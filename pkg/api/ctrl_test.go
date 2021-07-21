@@ -62,8 +62,8 @@ var _ = Describe("Routes.Resource", func() {
 
 		// setup routes and compile
 		subject = api.NewRoutes(cfg)
-		subject.Resource("/resources", api.StdModel())
-		subject.Resource("/resources/{resourceID}/nested", api.StdModel())
+		subject.Resource("/resources", nil)
+		subject.Resource("/resources/{resourceID}/nested", nil)
 	})
 
 	AfterEach(func() {

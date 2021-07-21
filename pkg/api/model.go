@@ -17,19 +17,15 @@ type Model interface {
 	// Patch patches a resource.
 	Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error
 	// Delete deletes a resource.
-	Delete(txn *Txn, path riposo.Path) (*schema.Object, error)
+	Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error)
 	// DeleteAll deletes resources.
-	DeleteAll(txn *Txn, path riposo.Path, objIDs ...string) (riposo.Epoch, error)
+	DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error)
 }
 
-type model struct{}
+// DefaultModel is an embeddable default model type.
+type DefaultModel struct{}
 
-// StdModel inits a standard model.
-func StdModel() Model {
-	return model{}
-}
-
-func (model) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
+func (DefaultModel) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
 	// find the object
 	obj, err := txn.Store.Get(path)
 	if err != nil {
@@ -45,7 +41,7 @@ func (model) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
 	return &schema.Resource{Data: obj, Permissions: pms}, nil
 }
 
-func (model) Create(txn *Txn, path riposo.Path, payload *schema.Resource) error {
+func (DefaultModel) Create(txn *Txn, path riposo.Path, payload *schema.Resource) error {
 	// create new object
 	err := txn.Store.Create(path, payload.Data)
 	if err != nil {
@@ -64,13 +60,13 @@ func (model) Create(txn *Txn, path riposo.Path, payload *schema.Resource) error 
 	return txn.Perms.CreatePermissions(path.WithObjectID(payload.Data.ID), payload.Permissions)
 }
 
-func (model) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// update existing object with received data
 	hs.Object().Update(payload.Data)
 	return update(txn, hs, path, payload.Permissions)
 }
 
-func (model) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// patch existing object with received data
 	if err := hs.Object().Patch(payload.Data); err != nil {
 		return err
@@ -78,9 +74,9 @@ func (model) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload 
 	return update(txn, hs, path, payload.Permissions)
 }
 
-func (model) Delete(txn *Txn, path riposo.Path) (*schema.Object, error) {
+func (DefaultModel) Delete(txn *Txn, path riposo.Path, _ *schema.Object) (*schema.Object, error) {
 	// delete permissions
-	if err := txn.Perms.DeletePermissions(path); err != nil {
+	if err := txn.Perms.DeletePermissions([]riposo.Path{path}); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +84,7 @@ func (model) Delete(txn *Txn, path riposo.Path) (*schema.Object, error) {
 	return txn.Store.Delete(path)
 }
 
-func (model) DeleteAll(txn *Txn, path riposo.Path, objIDs ...string) (riposo.Epoch, error) {
+func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error) {
 	// collect paths
 	paths := make([]riposo.Path, 0, len(objIDs))
 	for _, objID := range objIDs {
@@ -96,12 +92,12 @@ func (model) DeleteAll(txn *Txn, path riposo.Path, objIDs ...string) (riposo.Epo
 	}
 
 	// delete permissions
-	if err := txn.Perms.DeletePermissions(paths...); err != nil {
+	if err := txn.Perms.DeletePermissions(paths); err != nil {
 		return 0, err
 	}
 
 	// delete objects
-	return txn.Store.DeleteAll(paths...)
+	return txn.Store.DeleteAll(paths)
 }
 
 func update(txn *Txn, hs storage.UpdateHandle, path riposo.Path, ps schema.PermissionSet) error {

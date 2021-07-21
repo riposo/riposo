@@ -258,7 +258,7 @@ func (b *backend) CountAll(path riposo.Path, opt storage.CountOptions) (int64, e
 }
 
 // DeleteAll implements Transaction interface.
-func (b *backend) DeleteAll(paths ...riposo.Path) (modTime riposo.Epoch, _ error) {
+func (b *backend) DeleteAll(paths []riposo.Path) (modTime riposo.Epoch, _ error) {
 	now := riposo.EpochFromTime(b.cc.Now())
 
 	b.mu.Lock()

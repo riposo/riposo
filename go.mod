@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/alexedwards/argon2id v0.0.0-20210511081203-7d35d68092b8
 	github.com/benbjohnson/clock v1.1.0
+	github.com/bmatcuk/doublestar/v4 v4.0.2
 	github.com/bsm/minisql v0.1.0
 	github.com/bsm/nanoid v0.1.0
 	github.com/go-chi/chi v1.5.4

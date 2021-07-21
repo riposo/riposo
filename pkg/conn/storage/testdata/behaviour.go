@@ -359,27 +359,27 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(NumEntries()).To(Ω.Equal(8))
 
 		// ignore missing
-		Ω.Expect(tx.DeleteAll("/objects/foo")).To(Ω.Equal(riposo.Epoch(0)))
-		Ω.Expect(tx.DeleteAll("/objects/*")).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/foo"})).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/*"})).To(Ω.Equal(riposo.Epoch(0)))
 		Ω.Expect(NumEntries()).To(Ω.Equal(8))
 
 		// may delete only nested
-		Ω.Expect(tx.DeleteAll("/objects/OTHER")).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/OTHER"})).To(Ω.Equal(riposo.Epoch(0)))
 		Ω.Expect(NumEntries()).To(Ω.Equal(7))
 
 		// delete ITR.ID + MXR.ID (+ 2 nested MXR.ID)
-		modTime1, err := tx.DeleteAll(
+		modTime1, err := tx.DeleteAll([]riposo.Path{
 			"/objects/ITR.ID", // deletes ITR.ID
 			"/objects/MISSING",
 			"/objects/MXR.ID", // deletes MXR.ID + 2 nested
 			"/objects/Q3R.ID",
-		)
+		})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(modTime1).To(Ω.BeNumerically(">", o2.ModTime))
 		Ω.Expect(NumEntries()).To(Ω.Equal(3))
 
 		// delete EPR.ID
-		modTime2, err := tx.DeleteAll("/objects/EPR.ID")
+		modTime2, err := tx.DeleteAll([]riposo.Path{"/objects/EPR.ID"})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(modTime2).To(Ω.BeNumerically(">", modTime1))
 		Ω.Expect(NumEntries()).To(Ω.Equal(2))

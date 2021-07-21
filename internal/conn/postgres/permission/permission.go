@@ -224,7 +224,7 @@ func (tx *transaction) RemoveUserPrincipal(principal string, userIDs []string) (
 }
 
 // PurgeUserPrincipals implements permission.Transaction.
-func (tx *transaction) PurgeUserPrincipals(principals ...string) error {
+func (tx *transaction) PurgeUserPrincipals(principals []string) error {
 	if len(principals) == 0 {
 		return nil
 	}
@@ -431,7 +431,7 @@ func (tx *transaction) MergePermissions(path riposo.Path, set schema.PermissionS
 }
 
 // DeletePermissions implements permission.Transaction.
-func (tx *transaction) DeletePermissions(paths ...riposo.Path) error {
+func (tx *transaction) DeletePermissions(paths []riposo.Path) error {
 	if len(paths) == 0 {
 		return nil
 	}

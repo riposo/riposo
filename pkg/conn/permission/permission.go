@@ -47,7 +47,7 @@ type Transaction interface {
 	// RemoveUserPrincipal removes a principal from users.
 	RemoveUserPrincipal(principal string, userIDs []string) error
 	// PurgeUserPrincipals removes principals from every user.
-	PurgeUserPrincipals(principals ...string) error
+	PurgeUserPrincipals(principals []string) error
 
 	// GetACEPrincipals returns a list of principals for an Access Control Entry.
 	GetACEPrincipals(ent ACE) ([]string, error)
@@ -65,7 +65,7 @@ type Transaction interface {
 	// MergePermissions merges permissions of a single path.
 	MergePermissions(path riposo.Path, set schema.PermissionSet) error
 	// DeletePermissions recursively deletes for the given paths.
-	DeletePermissions(paths ...riposo.Path) error
+	DeletePermissions(paths []riposo.Path) error
 
 	// GetAccessiblePaths appends paths to dst that are accessible by principals within ents.
 	// ACE paths may contains wildcards.

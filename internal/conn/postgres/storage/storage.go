@@ -389,7 +389,7 @@ func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stor
 }
 
 // DeleteAll implements storage.Transaction interface.
-func (tx *transaction) DeleteAll(paths ...riposo.Path) (riposo.Epoch, error) {
+func (tx *transaction) DeleteAll(paths []riposo.Path) (riposo.Epoch, error) {
 	exact := paths[:0]
 	for _, path := range paths {
 		if !path.IsNode() {
