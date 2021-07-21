@@ -117,34 +117,34 @@ func (cn *conn) Begin(ctx context.Context) (storage.Transaction, error) {
 // Close closes the DB connection.
 func (cn *conn) Close() (err error) {
 	if cn.stmt.getModTime != nil {
-		multierr.Append(err, cn.stmt.getModTime.Close())
+		err = multierr.Append(err, cn.stmt.getModTime.Close())
 	}
 	if cn.stmt.existsObject != nil {
-		multierr.Append(err, cn.stmt.existsObject.Close())
+		err = multierr.Append(err, cn.stmt.existsObject.Close())
 	}
 	if cn.stmt.getObject != nil {
-		multierr.Append(err, cn.stmt.getObject.Close())
+		err = multierr.Append(err, cn.stmt.getObject.Close())
 	}
 	if cn.stmt.getObjectForUpdate != nil {
-		multierr.Append(err, cn.stmt.getObjectForUpdate.Close())
+		err = multierr.Append(err, cn.stmt.getObjectForUpdate.Close())
 	}
 	if cn.stmt.createObject != nil {
-		multierr.Append(err, cn.stmt.createObject.Close())
+		err = multierr.Append(err, cn.stmt.createObject.Close())
 	}
 	if cn.stmt.updateObject != nil {
-		multierr.Append(err, cn.stmt.updateObject.Close())
+		err = multierr.Append(err, cn.stmt.updateObject.Close())
 	}
 	if cn.stmt.deleteObject != nil {
-		multierr.Append(err, cn.stmt.deleteObject.Close())
+		err = multierr.Append(err, cn.stmt.deleteObject.Close())
 	}
 	if cn.stmt.deleteObjectNested != nil {
-		multierr.Append(err, cn.stmt.deleteObjectNested.Close())
+		err = multierr.Append(err, cn.stmt.deleteObjectNested.Close())
 	}
 	if cn.stmt.purgeObjects != nil {
-		multierr.Append(err, cn.stmt.purgeObjects.Close())
+		err = multierr.Append(err, cn.stmt.purgeObjects.Close())
 	}
 	if cn.db != nil {
-		multierr.Append(err, cn.db.Close())
+		err = multierr.Append(err, cn.db.Close())
 	}
 	return
 }

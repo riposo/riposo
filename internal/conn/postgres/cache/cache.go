@@ -96,16 +96,16 @@ func (cn *conn) Close() (err error) {
 	}
 
 	if cn.stmt.getKey != nil {
-		multierr.Append(err, cn.stmt.getKey.Close())
+		err = multierr.Append(err, cn.stmt.getKey.Close())
 	}
 	if cn.stmt.setKey != nil {
-		multierr.Append(err, cn.stmt.setKey.Close())
+		err = multierr.Append(err, cn.stmt.setKey.Close())
 	}
 	if cn.stmt.delKey != nil {
-		multierr.Append(err, cn.stmt.delKey.Close())
+		err = multierr.Append(err, cn.stmt.delKey.Close())
 	}
 	if cn.stmt.prune != nil {
-		multierr.Append(err, cn.stmt.prune.Close())
+		err = multierr.Append(err, cn.stmt.prune.Close())
 	}
 	return
 }
