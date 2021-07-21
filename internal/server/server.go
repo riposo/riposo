@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -69,6 +70,7 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 			ReadHeaderTimeout: time.Second,
 			ReadTimeout:       cfg.Server.ReadTimeout,
 			WriteTimeout:      cfg.Server.WriteTimeout,
+			BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		},
 		cfg: cfg,
 		cls: cls,

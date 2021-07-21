@@ -72,7 +72,9 @@ func (model) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload
 
 func (model) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// patch existing object with received data
-	hs.Object().Patch(payload.Data)
+	if err := hs.Object().Patch(payload.Data); err != nil {
+		return err
+	}
 	return update(txn, hs, path, payload.Permissions)
 }
 

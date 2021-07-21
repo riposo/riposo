@@ -100,31 +100,31 @@ func (cn *conn) Begin(ctx context.Context) (permission.Transaction, error) {
 // Close implements permission.Backend.
 func (cn *conn) Close() (err error) {
 	if cn.stmt.getUserPrincipals != nil {
-		multierr.Append(err, cn.stmt.getUserPrincipals.Close())
+		err = multierr.Append(err, cn.stmt.getUserPrincipals.Close())
 	}
 	if cn.stmt.removeUserPrincipal != nil {
-		multierr.Append(err, cn.stmt.removeUserPrincipal.Close())
+		err = multierr.Append(err, cn.stmt.removeUserPrincipal.Close())
 	}
 	if cn.stmt.purgeUserPrincipals != nil {
-		multierr.Append(err, cn.stmt.purgeUserPrincipals.Close())
+		err = multierr.Append(err, cn.stmt.purgeUserPrincipals.Close())
 	}
 	if cn.stmt.getACEPrincipals != nil {
-		multierr.Append(err, cn.stmt.getACEPrincipals.Close())
+		err = multierr.Append(err, cn.stmt.getACEPrincipals.Close())
 	}
 	if cn.stmt.matchACEPrincipals != nil {
-		multierr.Append(err, cn.stmt.matchACEPrincipals.Close())
+		err = multierr.Append(err, cn.stmt.matchACEPrincipals.Close())
 	}
 	if cn.stmt.insertACE != nil {
-		multierr.Append(err, cn.stmt.insertACE.Close())
+		err = multierr.Append(err, cn.stmt.insertACE.Close())
 	}
 	if cn.stmt.deleteACE != nil {
-		multierr.Append(err, cn.stmt.deleteACE.Close())
+		err = multierr.Append(err, cn.stmt.deleteACE.Close())
 	}
 	if cn.stmt.getPerms != nil {
-		multierr.Append(err, cn.stmt.getPerms.Close())
+		err = multierr.Append(err, cn.stmt.getPerms.Close())
 	}
 	if cn.db != nil {
-		multierr.Append(err, cn.db.Close())
+		err = multierr.Append(err, cn.db.Close())
 	}
 	return
 }

@@ -3,8 +3,9 @@ package cli
 import (
 	"context"
 	"flag"
+	"os/signal"
+	"syscall"
 
-	"github.com/bsm/shutdown"
 	"github.com/google/subcommands"
 	"github.com/riposo/riposo/internal/config"
 	"github.com/riposo/riposo/internal/server"
@@ -31,12 +32,14 @@ func (c *serverCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface
 }
 
 func (c *serverCmd) run(cfg *config.Config, ctx context.Context) error {
-	term := shutdown.WithContext(ctx)
-	srv, err := server.New(term, cfg)
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	srv, err := server.New(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	defer srv.Close()
 
-	return term.WaitFor(srv.ListenAndServe)
+	return srv.ListenAndServe()
 }

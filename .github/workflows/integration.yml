@@ -1,0 +1,56 @@
+name: integration
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        ruby-version: ["3.0"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Checkout CMD
+        uses: actions/checkout@v2
+        with:
+          path: cmd
+          repository: riposo/cmd
+          token: ${{ secrets.PAT }}
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - name: Cache modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Build server
+        working-directory: cmd
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: |
+          ./build.sh --plugins accounts,flush --source ../ -o ../riposo
+      - name: Start server
+        run: |
+          ./riposo server &
+        env:
+          RIPOSO_ACCOUNT_CREATE_PRINCIPALS: system.Everyone
+          RIPOSO_BUCKET_CREATE_PRINCIPALS: system.Authenticated
+          RIPOSO_PLUGINS: accounts,flush
+      - name: Run tests
+        run: bundle exec rspec -fd
