@@ -150,10 +150,15 @@ var _ = Describe("Group Model", func() {
 				"system.Authenticated",
 				"system.Everyone",
 			))
-			Expect(subject.DeleteAll(txn, "/buckets/foo/groups/*", []string{
+
+			modTime, deleted, err := subject.DeleteAll(txn, "/buckets/foo/groups/*", []string{
 				"EPR.ID",
 				"ITR.ID",
-			})).To(Equal(riposo.Epoch(1515151515680)))
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(modTime).To(Equal(riposo.Epoch(1515151515680)))
+			Expect(deleted).To(HaveLen(2))
+
 			Expect(txn.Perms.GetUserPrincipals("alice")).To(ConsistOf(
 				"alice",
 				"system.Authenticated",

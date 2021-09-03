@@ -358,17 +358,33 @@ func BehavesLikeBackend(link *LikeBackend) {
 		time.Sleep(time.Millisecond)
 		Ω.Expect(NumEntries()).To(Ω.Equal(8))
 
+		// reject node paths
+		_, _, err := tx.DeleteAll([]riposo.Path{"/objects/*"})
+		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
+
+		// ignore empty
+		modTime, deleted, err := tx.DeleteAll(nil)
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(modTime).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(deleted).To(Ω.BeEmpty())
+
 		// ignore missing
-		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/foo"})).To(Ω.Equal(riposo.Epoch(0)))
-		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/*"})).To(Ω.Equal(riposo.Epoch(0)))
+		modTime, deleted, err = tx.DeleteAll([]riposo.Path{"/objects/foo"})
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(modTime).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(deleted).To(Ω.BeEmpty())
 		Ω.Expect(NumEntries()).To(Ω.Equal(8))
 
 		// may delete only nested
-		Ω.Expect(tx.DeleteAll([]riposo.Path{"/objects/OTHER"})).To(Ω.Equal(riposo.Epoch(0)))
-		Ω.Expect(NumEntries()).To(Ω.Equal(7))
+		modTime, deleted, err = tx.DeleteAll([]riposo.Path{"/objects/OTHER"})
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(modTime).To(Ω.Equal(riposo.Epoch(0)))
+		Ω.Expect(deleted).To(Ω.ConsistOf([]riposo.Path{
+			"/objects/OTHER/nested/5HR.ID",
+		}))
 
 		// delete ITR.ID + MXR.ID (+ 2 nested MXR.ID)
-		modTime1, err := tx.DeleteAll([]riposo.Path{
+		modTime1, deleted, err := tx.DeleteAll([]riposo.Path{
 			"/objects/ITR.ID", // deletes ITR.ID
 			"/objects/MISSING",
 			"/objects/MXR.ID", // deletes MXR.ID + 2 nested
@@ -376,12 +392,21 @@ func BehavesLikeBackend(link *LikeBackend) {
 		})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(modTime1).To(Ω.BeNumerically(">", o2.ModTime))
+		Ω.Expect(deleted).To(Ω.ConsistOf([]riposo.Path{
+			"/objects/ITR.ID",
+			"/objects/MXR.ID",
+			"/objects/MXR.ID/nested/U7R.ID",
+			"/objects/MXR.ID/nested/ZDR.ID",
+		}))
 		Ω.Expect(NumEntries()).To(Ω.Equal(3))
 
 		// delete EPR.ID
-		modTime2, err := tx.DeleteAll([]riposo.Path{"/objects/EPR.ID"})
+		modTime2, deleted, err := tx.DeleteAll([]riposo.Path{"/objects/EPR.ID"})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(modTime2).To(Ω.BeNumerically(">", modTime1))
+		Ω.Expect(deleted).To(Ω.ConsistOf([]riposo.Path{
+			"/objects/EPR.ID",
+		}))
 		Ω.Expect(NumEntries()).To(Ω.Equal(2))
 
 		// maintain the node's epoch

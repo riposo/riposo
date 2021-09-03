@@ -234,51 +234,43 @@ var _ = Describe("Model", func() {
 			Expect(nested.Create(txn, "/objects/MXR.ID/nested/*", resource())).To(Succeed())
 		})
 
-		It("deletes objects", func() {
+		It("deletes objects with nested", func() {
 			Expect(txn.Store.Get("/objects/EPR.ID")).NotTo(BeNil())
-			Expect(txn.Store.Get("/objects/ITR.ID")).NotTo(BeNil())
-			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
-			Expect(txn.Perms.GetPermissions("/objects/ITR.ID")).To(HaveLen(1))
-			Expect(txn.Perms.GetPermissions("/objects/MXR.ID")).To(HaveLen(1))
-
-			Expect(subject.DeleteAll(txn, "/objects/*", []string{
-				"EPR.ID",
-				"BADID",
-				"ITR.ID",
-			})).To(Equal(riposo.Epoch(1515151515681)))
-
-			_, err := txn.Store.Get("/objects/EPR.ID")
-			Expect(err).To(MatchError(storage.ErrNotFound))
-			_, err = txn.Store.Get("/objects/ITR.ID")
-			Expect(err).To(MatchError(storage.ErrNotFound))
-			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
-			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(BeEmpty())
-			Expect(txn.Perms.GetPermissions("/objects/ITR.ID")).To(BeEmpty())
-			Expect(txn.Perms.GetPermissions("/objects/MXR.ID")).To(HaveLen(1))
-		})
-
-		It("deletes nested", func() {
 			Expect(txn.Store.Get("/objects/EPR.ID/nested/Q3R.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/ITR.ID")).NotTo(BeNil())
 			Expect(txn.Store.Get("/objects/ITR.ID/nested/U7R.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
 			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID")).NotTo(BeNil())
+
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/Q3R.ID")).To(HaveLen(1))
+			Expect(txn.Perms.GetPermissions("/objects/ITR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/ITR.ID/nested/U7R.ID")).To(HaveLen(1))
+			Expect(txn.Perms.GetPermissions("/objects/MXR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/MXR.ID/nested/ZDR.ID")).To(HaveLen(1))
 
-			Expect(subject.DeleteAll(txn, "/objects/*", []string{
+			modTime, deleted, err := subject.DeleteAll(txn, "/objects/*", []string{
 				"EPR.ID",
 				"BADID",
 				"ITR.ID",
-			})).To(Equal(riposo.Epoch(1515151515681)))
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(modTime).To(Equal(riposo.Epoch(1515151515681)))
+			Expect(deleted).To(ConsistOf([]riposo.Path{
+				"/objects/EPR.ID",
+				"/objects/EPR.ID/nested/Q3R.ID",
+				"/objects/ITR.ID",
+				"/objects/ITR.ID/nested/U7R.ID",
+			}))
 
-			_, err := txn.Store.Get("/objects/EPR.ID/nested/Q3R.ID")
-			Expect(err).To(MatchError(storage.ErrNotFound))
-			_, err = txn.Store.Get("/objects/ITR.ID/nested/U7R.ID")
-			Expect(err).To(MatchError(storage.ErrNotFound))
+			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
 			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID")).NotTo(BeNil())
+
+			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(BeEmpty())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/Q3R.ID")).To(BeEmpty())
+			Expect(txn.Perms.GetPermissions("/objects/ITR.ID")).To(BeEmpty())
 			Expect(txn.Perms.GetPermissions("/objects/ITR.ID/nested/U7R.ID")).To(BeEmpty())
+			Expect(txn.Perms.GetPermissions("/objects/MXR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/MXR.ID/nested/ZDR.ID")).To(HaveLen(1))
 		})
 	})

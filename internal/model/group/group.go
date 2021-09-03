@@ -110,7 +110,7 @@ func (m Model) Delete(txn *api.Txn, path riposo.Path, exst *schema.Object) (*sch
 }
 
 // DeleteAll deletes resources in bulk.
-func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error) {
+func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
 	if len(objIDs) != 0 {
 		// purge principals
 		principals := make([]string, 0, len(objIDs))
@@ -118,7 +118,7 @@ func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (ripos
 			principals = append(principals, path.WithObjectID(objID).String())
 		}
 		if err := purgePrincipals(txn, principals); err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 	}
 

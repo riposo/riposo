@@ -143,7 +143,7 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 	}
 
 	// delete resources
-	modTime, err := c.mod.DeleteAll(req.Txn, req.Path, objIDs.S)
+	modTime, deleted, err := c.mod.DeleteAll(req.Txn, req.Path, objIDs.S)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 
 	// run after hooks
 	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterDeleteAll(req.Txn, req.Path, objIDs.S, modTime)
+		return h.AfterDeleteAll(req.Txn, req.Path, objIDs.S, modTime, deleted)
 	}); err != nil {
 		return err
 	}

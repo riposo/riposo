@@ -23,7 +23,7 @@ type Hook interface {
 	AfterDelete(txn *Txn, path riposo.Path, deleted *schema.Object) error
 
 	BeforeDeleteAll(txn *Txn, path riposo.Path, objIDs []string) error
-	AfterDeleteAll(txn *Txn, path riposo.Path, objIDs []string, modTime riposo.Epoch) error
+	AfterDeleteAll(txn *Txn, path riposo.Path, objIDs []string, modTime riposo.Epoch, deleted []riposo.Path) error
 }
 
 // NoopHook is an embeddable model hook type.
@@ -56,7 +56,7 @@ func (NoopHook) AfterDelete(_ *Txn, _ riposo.Path, _ *schema.Object) error {
 func (NoopHook) BeforeDeleteAll(_ *Txn, _ riposo.Path, _ []string) error {
 	return nil
 }
-func (NoopHook) AfterDeleteAll(_ *Txn, _ riposo.Path, _ []string, _ riposo.Epoch) error {
+func (NoopHook) AfterDeleteAll(_ *Txn, _ riposo.Path, _ []string, _ riposo.Epoch, _ []riposo.Path) error {
 	return nil
 }
 

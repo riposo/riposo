@@ -19,7 +19,7 @@ type Model interface {
 	// Delete deletes a resource.
 	Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error)
 	// DeleteAll deletes resources.
-	DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error)
+	DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error)
 }
 
 // DefaultModel is an embeddable default model type.
@@ -84,7 +84,7 @@ func (DefaultModel) Delete(txn *Txn, path riposo.Path, _ *schema.Object) (*schem
 	return txn.Store.Delete(path)
 }
 
-func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error) {
+func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
 	// collect paths
 	paths := make([]riposo.Path, 0, len(objIDs))
 	for _, objID := range objIDs {
@@ -93,7 +93,7 @@ func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (ripo
 
 	// delete permissions
 	if err := txn.Perms.DeletePermissions(paths); err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	// delete objects
