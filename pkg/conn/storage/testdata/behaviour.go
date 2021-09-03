@@ -12,9 +12,9 @@ import (
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
 
-	Ψ "github.com/onsi/ginkgo"
-	Ω "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
+	Ψ "github.com/bsm/ginkgo"
+	Ω "github.com/bsm/gomega"
+	"github.com/bsm/gomega/types"
 )
 
 type testableTx interface {

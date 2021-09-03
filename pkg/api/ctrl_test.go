@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/gomega"
+	"github.com/bsm/gomega/types"
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/mock"

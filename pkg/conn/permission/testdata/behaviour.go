@@ -4,9 +4,9 @@ import (
 	"context"
 	"sort"
 
-	Ψ "github.com/onsi/ginkgo"
-	Ω "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
+	Ψ "github.com/bsm/ginkgo"
+	Ω "github.com/bsm/gomega"
+	"github.com/bsm/gomega/types"
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"

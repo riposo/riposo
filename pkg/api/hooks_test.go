@@ -4,9 +4,9 @@ import (
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/riposo"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/ginkgo/extensions/table"
+	. "github.com/bsm/gomega"
 )
 
 var _ = Describe("Hooks", func() {
@@ -47,10 +47,10 @@ var _ = Describe("Hooks", func() {
 	DescribeTable("iterates over matching hooks",
 		func(path string, exp ...api.Hook) {
 			var matches []api.Hook
-			subject.ForEach(riposo.Path(path), func(h api.Hook) error {
+			Expect(subject.ForEach(riposo.Path(path), func(h api.Hook) error {
 				matches = append(matches, h)
 				return nil
-			})
+			})).To(Succeed())
 			if len(exp) == 0 {
 				Expect(matches).To(BeEmpty())
 			} else {
