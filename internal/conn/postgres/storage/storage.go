@@ -389,15 +389,15 @@ func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stor
 }
 
 // DeleteAll implements storage.Transaction interface.
-func (tx *transaction) DeleteAll(paths ...riposo.Path) (riposo.Epoch, error) {
-	exact := paths[:0]
+func (tx *transaction) DeleteAll(paths []riposo.Path) (riposo.Epoch, []riposo.Path, error) {
 	for _, path := range paths {
-		if !path.IsNode() {
-			exact = append(exact, path)
+		if path.IsNode() {
+			return 0, nil, storage.ErrInvalidPath
 		}
 	}
-	if len(exact) == 0 {
-		return 0, nil
+
+	if len(paths) == 0 {
+		return 0, nil, nil
 	}
 
 	stmt := newQueryBuilder()
@@ -405,7 +405,7 @@ func (tx *transaction) DeleteAll(paths ...riposo.Path) (riposo.Epoch, error) {
 
 	// delete exact
 	stmt.AppendString(`UPDATE storage_objects SET deleted = TRUE WHERE NOT deleted AND (path, id) IN (`)
-	for i, path := range exact {
+	for i, path := range paths {
 		if i != 0 {
 			stmt.AppendString(`, `)
 		}
@@ -417,32 +417,37 @@ func (tx *transaction) DeleteAll(paths ...riposo.Path) (riposo.Epoch, error) {
 		stmt.AppendValue(objID)
 		stmt.AppendByte(')')
 	}
-	stmt.AppendString(") RETURNING last_modified")
+	stmt.AppendString(") RETURNING path, id, last_modified")
 
 	// process deleted
-	rows, err := stmt.QueryContext(tx.ctx, tx)
+	deleted := make([]riposo.Path, 0, len(paths))
+	rows1, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	defer rows.Close()
+	defer rows1.Close()
 
 	var modTime riposo.Epoch
-	for rows.Next() {
-		var epoch riposo.Epoch
-		if err := rows.Scan(&epoch); err != nil {
-			return 0, err
+	for rows1.Next() {
+		var (
+			ns, objID string
+			epoch     riposo.Epoch
+		)
+		if err := rows1.Scan(&ns, &objID, &epoch); err != nil {
+			return 0, nil, err
 		}
+		deleted = append(deleted, riposo.JoinPath(ns, objID))
 		if epoch > modTime {
 			modTime = epoch
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return 0, err
+	if err := rows1.Err(); err != nil {
+		return 0, nil, err
 	}
 
 	stmt.Reset()
 	stmt.AppendString(`UPDATE storage_objects SET deleted = TRUE WHERE NOT deleted AND (`)
-	for i, path := range exact {
+	for i, path := range paths {
 		if i != 0 {
 			stmt.AppendString(` OR `)
 		}
@@ -450,14 +455,28 @@ func (tx *transaction) DeleteAll(paths ...riposo.Path) (riposo.Epoch, error) {
 		stmt.AppendString("path LIKE ")
 		stmt.AppendValue(ns + "/" + objID + "/%")
 	}
-	stmt.AppendByte(')')
+	stmt.AppendString(") RETURNING path, id")
 
 	// delete nested
-	if _, err := stmt.
-		ExecContext(tx.ctx, tx); err != nil {
-		return 0, err
+	rows2, err := stmt.QueryContext(tx.ctx, tx)
+	if err != nil {
+		return 0, nil, err
 	}
-	return modTime, nil
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var ns, objID string
+		if err := rows2.Scan(&ns, &objID); err != nil {
+			return 0, nil, err
+		}
+		deleted = append(deleted, riposo.JoinPath(ns, objID))
+	}
+
+	if err := rows2.Err(); err != nil {
+		return 0, nil, err
+	}
+
+	return modTime, deleted, nil
 }
 
 // Purge implements storage.Transaction interface.

@@ -118,7 +118,7 @@ func (b *backend) RemoveUserPrincipal(principal string, userIDs []string) error 
 }
 
 // PurgeUserPrincipals implements permission.Transaction interface.
-func (b *backend) PurgeUserPrincipals(principals ...string) error {
+func (b *backend) PurgeUserPrincipals(principals []string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -254,7 +254,7 @@ func (b *backend) MergePermissions(path riposo.Path, set schema.PermissionSet) e
 }
 
 // DeletePermissions implements permission.Transaction interface.
-func (b *backend) DeletePermissions(paths ...riposo.Path) error {
+func (b *backend) DeletePermissions(paths []riposo.Path) error {
 	if len(paths) == 0 {
 		return nil
 	}

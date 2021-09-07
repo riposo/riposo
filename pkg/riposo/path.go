@@ -21,6 +21,11 @@ func NormPath(path string) Path {
 	return Path(path + "/*")
 }
 
+// JoinPath joins namespace and object ID.
+func JoinPath(namespace, objID string) Path {
+	return NormPath(namespace + "/" + objID)
+}
+
 // Parent returns the parent path.
 func (p Path) Parent() Path {
 	var xx bool

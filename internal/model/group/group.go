@@ -9,15 +9,13 @@ import (
 	"github.com/riposo/riposo/pkg/schema"
 )
 
-type modGroup struct{ api.Model }
-
-// Model inits a new group model.
-func Model() api.Model {
-	return modGroup{Model: api.StdModel()}
+// Model implements the group model.
+type Model struct {
+	api.DefaultModel
 }
 
 // Create overrides.
-func (m modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) error {
+func (m Model) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -25,7 +23,7 @@ func (m modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resourc
 	}
 
 	// perform action
-	if err := m.Model.Create(txn, path, payload); err != nil {
+	if err := m.DefaultModel.Create(txn, path, payload); err != nil {
 		return err
 	}
 
@@ -39,7 +37,7 @@ func (m modGroup) Create(txn *api.Txn, path riposo.Path, payload *schema.Resourc
 }
 
 // Update overrides.
-func (m modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -48,12 +46,12 @@ func (m modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle
 
 	// purge principal
 	principal := path.String()
-	if err := purgePrincipals(txn, principal); err != nil {
+	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.Model.Update(txn, path, hs, payload); err != nil {
+	if err := m.DefaultModel.Update(txn, path, hs, payload); err != nil {
 		return err
 	}
 
@@ -66,7 +64,7 @@ func (m modGroup) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle
 }
 
 // Patch overrides.
-func (m modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	_, err := normGroup(payload.Data, false)
 	if err != nil {
@@ -75,12 +73,12 @@ func (m modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle,
 
 	// purge principal
 	principal := path.String()
-	if err := purgePrincipals(txn, principal); err != nil {
+	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.Model.Patch(txn, path, hs, payload); err != nil {
+	if err := m.DefaultModel.Patch(txn, path, hs, payload); err != nil {
 		return err
 	}
 
@@ -99,41 +97,41 @@ func (m modGroup) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle,
 }
 
 // Delete overrides.
-func (m modGroup) Delete(txn *api.Txn, path riposo.Path) (*schema.Object, error) {
+func (m Model) Delete(txn *api.Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error) {
 	principal := path.String()
 
 	// purge principal
-	if err := purgePrincipals(txn, principal); err != nil {
+	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return nil, err
 	}
 
 	// perform action
-	return m.Model.Delete(txn, path)
+	return m.DefaultModel.Delete(txn, path, exst)
 }
 
 // DeleteAll deletes resources in bulk.
-func (m modGroup) DeleteAll(txn *api.Txn, path riposo.Path, objIDs ...string) (riposo.Epoch, error) {
+func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
 	if len(objIDs) != 0 {
 		// purge principals
 		principals := make([]string, 0, len(objIDs))
 		for _, objID := range objIDs {
 			principals = append(principals, path.WithObjectID(objID).String())
 		}
-		if err := purgePrincipals(txn, principals...); err != nil {
-			return 0, err
+		if err := purgePrincipals(txn, principals); err != nil {
+			return 0, nil, err
 		}
 	}
 
 	// perform action
-	return m.Model.DeleteAll(txn, path, objIDs...)
+	return m.DefaultModel.DeleteAll(txn, path, objIDs)
 }
 
 func addPrincipal(txn *api.Txn, principal string, userIDs []string) error {
 	return txn.Perms.AddUserPrincipal(principal, userIDs)
 }
 
-func purgePrincipals(txn *api.Txn, principals ...string) error {
-	return txn.Perms.PurgeUserPrincipals(principals...)
+func purgePrincipals(txn *api.Txn, principals []string) error {
+	return txn.Perms.PurgeUserPrincipals(principals)
 }
 
 // --------------------------------------------------------------------

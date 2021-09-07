@@ -7,8 +7,8 @@ import (
 	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/mock"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/gomega"
 )
 
 var _ = Describe("OneOf", func() {

@@ -197,7 +197,7 @@ func (b *backend) Delete(path riposo.Path) (*schema.Object, error) {
 	defer b.mu.Unlock()
 
 	var deleted *schema.Object
-	b.delete(path, now, true, func(obj *schema.Object, exact bool) {
+	b.delete(path, now, true, func(_ string, obj *schema.Object, exact bool) {
 		if exact {
 			deleted = obj
 		}
@@ -258,17 +258,28 @@ func (b *backend) CountAll(path riposo.Path, opt storage.CountOptions) (int64, e
 }
 
 // DeleteAll implements Transaction interface.
-func (b *backend) DeleteAll(paths ...riposo.Path) (modTime riposo.Epoch, _ error) {
+func (b *backend) DeleteAll(paths []riposo.Path) (modTime riposo.Epoch, deleted []riposo.Path, _ error) {
+	for _, path := range paths {
+		if path.IsNode() {
+			return 0, nil, storage.ErrInvalidPath
+		}
+	}
+
+	if len(paths) == 0 {
+		return 0, nil, nil
+	}
+
 	now := riposo.EpochFromTime(b.cc.Now())
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	for _, path := range paths {
-		b.delete(path, now, false, func(obj *schema.Object, exact bool) {
+		b.delete(path, now, false, func(ns string, obj *schema.Object, exact bool) {
 			if exact && obj.ModTime > modTime {
 				modTime = obj.ModTime
 			}
+			deleted = append(deleted, riposo.JoinPath(ns, obj.ID))
 		})
 	}
 	return
@@ -299,7 +310,7 @@ func (b *backend) Purge(olderThan riposo.Epoch) (cnt int64, err error) {
 	return
 }
 
-func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool, cb func(*schema.Object, bool)) {
+func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool, cb func(string, *schema.Object, bool)) {
 	ns, objID := path.Split()
 
 	// fetch node
@@ -311,7 +322,7 @@ func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool
 	// delete object
 	obj := node.Del(objID, epoch)
 	if obj != nil {
-		cb(obj, true)
+		cb(ns, obj, true)
 		b.dead.FetchNode(ns, 0).ForcePut(obj)
 	} else if requireExact {
 		return
@@ -322,7 +333,7 @@ func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool
 		if strings.HasPrefix(nns, path.String()) {
 			for objID := range node.objects {
 				if obj := node.Del(objID, epoch); obj != nil {
-					cb(obj, false)
+					cb(nns, obj, false)
 					b.dead.FetchNode(nns, 0).ForcePut(obj)
 				}
 			}

@@ -6,8 +6,8 @@ import (
 	"github.com/riposo/riposo/pkg/conn/cache"
 	"github.com/riposo/riposo/pkg/conn/cache/testdata"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/gomega"
 	. "github.com/riposo/riposo/internal/conn/memory/cache"
 )
 
