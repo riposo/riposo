@@ -3,18 +3,18 @@ package schema_test
 import (
 	"encoding/json"
 
-	"github.com/riposo/riposo/pkg/schema"
 	"github.com/tidwall/gjson"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/schema"
 )
 
 var _ = Describe("Object", func() {
-	var subject *schema.Object
+	var subject *Object
 
 	BeforeEach(func() {
-		subject = &schema.Object{
+		subject = &Object{
 			ID:      "EPR.ID",
 			ModTime: 1567815678988,
 			Extra:   []byte(`{"meta": true, "nested": {"num": 33}}`),
@@ -22,14 +22,14 @@ var _ = Describe("Object", func() {
 	})
 
 	It("gets values", func() {
-		Expect(subject.Get("id")).To(Equal(schema.Value{Type: gjson.String, Raw: `"EPR.ID"`, Str: "EPR.ID"}))
-		Expect(subject.Get("last_modified")).To(Equal(schema.Value{Type: gjson.Number, Raw: `1567815678988`, Num: 1567815678988}))
-		Expect(subject.Get("deleted")).To(Equal(schema.Value{Type: gjson.False, Raw: `false`}))
-		Expect(subject.Get("meta")).To(Equal(schema.Value{Type: gjson.True, Raw: `true`, Index: 9}))
-		Expect(subject.Get("nested")).To(Equal(schema.Value{Type: gjson.JSON, Raw: `{"num": 33}`, Index: 25}))
-		Expect(subject.Get("nested.num")).To(Equal(schema.Value{Type: gjson.Number, Raw: `33`, Num: 33, Index: 33}))
-		Expect(subject.Get("unknown")).To(Equal(schema.Value{}))
-		Expect(subject.Get("nested.unknown")).To(Equal(schema.Value{}))
+		Expect(subject.Get("id")).To(Equal(Value{Type: gjson.String, Raw: `"EPR.ID"`, Str: "EPR.ID"}))
+		Expect(subject.Get("last_modified")).To(Equal(Value{Type: gjson.Number, Raw: `1567815678988`, Num: 1567815678988}))
+		Expect(subject.Get("deleted")).To(Equal(Value{Type: gjson.False, Raw: `false`}))
+		Expect(subject.Get("meta")).To(Equal(Value{Type: gjson.True, Raw: `true`, Index: 9}))
+		Expect(subject.Get("nested")).To(Equal(Value{Type: gjson.JSON, Raw: `{"num": 33}`, Index: 25}))
+		Expect(subject.Get("nested.num")).To(Equal(Value{Type: gjson.Number, Raw: `33`, Num: 33, Index: 33}))
+		Expect(subject.Get("unknown")).To(Equal(Value{}))
+		Expect(subject.Get("nested.unknown")).To(Equal(Value{}))
 	})
 
 	It("marshals to JSON", func() {
@@ -47,7 +47,7 @@ var _ = Describe("Object", func() {
 			"deleted": true
 		}`))
 
-		Expect(json.Marshal(new(schema.Object))).To(MatchJSON(`{
+		Expect(json.Marshal(new(Object))).To(MatchJSON(`{
 			"id": "",
 			"last_modified": 0
 		}`))
@@ -70,11 +70,11 @@ var _ = Describe("Object", func() {
 	})
 
 	It("updates objects", func() {
-		o2 := &schema.Object{ID: "ITR.ID", ModTime: 1567815679000, Extra: []byte(`{"a": 1}`)}
+		o2 := &Object{ID: "ITR.ID", ModTime: 1567815679000, Extra: []byte(`{"a": 1}`)}
 		subject.Update(o2)
 		Expect(subject).To(Equal(o2))
 
-		subject.Update(&schema.Object{})
+		subject.Update(&Object{})
 		Expect(subject).To(Equal(o2))
 
 		o2.Extra = append(o2.Extra[:6], '2', '}')
@@ -82,12 +82,12 @@ var _ = Describe("Object", func() {
 	})
 
 	It("patches objects", func() {
-		o1 := &schema.Object{}
-		o2 := &schema.Object{}
+		o1 := &Object{}
+		o2 := &Object{}
 		Expect(o1.Patch(o2)).To(Succeed())
 		Expect(o1.Extra).To(BeNil())
 
-		o2 = &schema.Object{Extra: []byte(`{
+		o2 = &Object{Extra: []byte(`{
 			"a": "ok",
 			"d": [false, 8],
 			"e": {"y": 2, "z": 3},
@@ -101,7 +101,7 @@ var _ = Describe("Object", func() {
 			"f": "extra"
 		}`))
 
-		o1 = &schema.Object{Extra: []byte(`{
+		o1 = &Object{Extra: []byte(`{
 			"a": true,
 			"b": 33,
 			"c": "str",
@@ -118,8 +118,8 @@ var _ = Describe("Object", func() {
 			"f": "extra"
 		}`))
 
-		o1 = &schema.Object{Extra: []byte(`{"a": true}`)}
-		o2 = &schema.Object{Extra: []byte(`{"a": null}`)}
+		o1 = &Object{Extra: []byte(`{"a": true}`)}
+		o2 = &Object{Extra: []byte(`{"a": null}`)}
 		Expect(o1.Patch(o2)).To(Succeed())
 		Expect(o1.Extra).To(MatchJSON(`{"a": true}`))
 	})

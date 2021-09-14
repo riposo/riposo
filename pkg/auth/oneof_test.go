@@ -4,20 +4,20 @@ import (
 	"net/http"
 
 	"github.com/riposo/riposo/pkg/api"
-	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/mock"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/auth"
 )
 
 var _ = Describe("OneOf", func() {
-	var subject auth.Method
+	var subject Method
 	var txn *api.Txn
 
 	BeforeEach(func() {
 		txn = mock.Txn()
-		subject = auth.OneOf(mockAuth("alice"), mockAuth("bob"))
+		subject = OneOf(mockAuth("alice"), mockAuth("bob"))
 	})
 
 	AfterEach(func() {
@@ -38,7 +38,7 @@ var _ = Describe("OneOf", func() {
 		req := mock.Request(txn, "GET", "/", nil)
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`no credentials`))
 	})
 
@@ -47,17 +47,17 @@ var _ = Describe("OneOf", func() {
 		req.SetBasicAuth("claire", "")
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`unknown user`))
 	})
 
 	It("fails when empty", func() {
-		subject = auth.OneOf()
+		subject = OneOf()
 		req := mock.Request(txn, "GET", "/", nil)
 		req.SetBasicAuth("alice", "")
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`no authentication methods enabled`))
 	})
 })
@@ -67,9 +67,9 @@ type mockAuth string
 func (m mockAuth) Authenticate(r *http.Request) (*api.User, error) {
 	user, _, ok := r.BasicAuth()
 	if !ok {
-		return nil, auth.Errorf("no credentials")
+		return nil, Errorf("no credentials")
 	} else if user != string(m) {
-		return nil, auth.Errorf("unknown user")
+		return nil, Errorf("unknown user")
 	}
 	return &api.User{ID: "mock:" + user}, nil
 }

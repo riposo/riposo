@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/schema"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
 var _ = Describe("Rebder", func() {
@@ -20,7 +20,7 @@ var _ = Describe("Rebder", func() {
 	})
 
 	It("renders structs", func() {
-		api.Render(w, &mockRenderType{Name: "foo"})
+		Render(w, &mockRenderType{Name: "foo"})
 		Expect(w.Code).To(Equal(http.StatusOK))
 		Expect(w.Header()).To(Equal(http.Header{
 			"Content-Type": {"application/json; charset=utf-8"},
@@ -29,7 +29,7 @@ var _ = Describe("Rebder", func() {
 	})
 
 	It("renders schema errors", func() {
-		api.Render(w, schema.Forbidden)
+		Render(w, schema.Forbidden)
 		Expect(w.Code).To(Equal(http.StatusForbidden))
 		Expect(w.Body.String()).To(MatchJSON(`{
 			"code": 403,
@@ -40,7 +40,7 @@ var _ = Describe("Rebder", func() {
 	})
 
 	It("renders other errors", func() {
-		api.Render(w, fmt.Errorf("doh!"))
+		Render(w, fmt.Errorf("doh!"))
 		Expect(w.Code).To(Equal(http.StatusInternalServerError))
 		Expect(w.Body.String()).To(MatchJSON(`{
 			"code": 500,
@@ -51,24 +51,24 @@ var _ = Describe("Rebder", func() {
 	})
 
 	It("renders nil", func() {
-		api.Render(w, nil)
+		Render(w, nil)
 		Expect(w.Code).To(Equal(http.StatusOK))
 		Expect(w.Body.Len()).To(Equal(0))
 	})
 
 	It("renders custom status", func() {
-		api.Render(w, &customStatusType{Status: http.StatusTeapot})
+		Render(w, &customStatusType{Status: http.StatusTeapot})
 		Expect(w.Code).To(Equal(http.StatusTeapot))
 		Expect(w.Body.String()).To(MatchJSON(`{ "code": 418 }`))
 
 		w = httptest.NewRecorder()
-		api.Render(w, &customStatusType{})
+		Render(w, &customStatusType{})
 		Expect(w.Code).To(Equal(http.StatusOK))
 		Expect(w.Body.String()).To(MatchJSON(`{ "code": 0 }`))
 	})
 
 	It("fails gracefully", func() {
-		api.Render(w, &nonMarshalableType{})
+		Render(w, &nonMarshalableType{})
 		Expect(w.Code).To(Equal(http.StatusInternalServerError))
 		Expect(w.Body.String()).To(MatchJSON(`{
 			"code": 500,

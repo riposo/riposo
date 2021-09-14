@@ -2,16 +2,16 @@ package auth_test
 
 import (
 	"github.com/riposo/riposo/pkg/api"
-	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/schema"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/auth"
 )
 
 var _ = Describe("Basic", func() {
-	var subject auth.Method
+	var subject Method
 	var txn *api.Txn
 
 	BeforeEach(func() {
@@ -24,7 +24,7 @@ var _ = Describe("Basic", func() {
 			Extra: []byte(`{"password":"` + pass + `"}`),
 		})).To(Succeed())
 
-		subject = auth.Basic()
+		subject = Basic()
 	})
 
 	AfterEach(func() {
@@ -42,7 +42,7 @@ var _ = Describe("Basic", func() {
 		req := mock.Request(txn, "GET", "/", nil)
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`no basic auth credentials`))
 	})
 
@@ -51,7 +51,7 @@ var _ = Describe("Basic", func() {
 		req.SetBasicAuth("unknown", "s3cret")
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`unknown user account`))
 	})
 
@@ -60,7 +60,7 @@ var _ = Describe("Basic", func() {
 		req.SetBasicAuth("testuser", "wrongpass")
 
 		_, err := subject.Authenticate(req)
-		Expect(err).To(MatchError(auth.ErrUnauthenticated))
+		Expect(err).To(MatchError(ErrUnauthenticated))
 		Expect(err).To(MatchError(`invalid password`))
 	})
 })

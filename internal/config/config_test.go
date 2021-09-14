@@ -3,17 +3,16 @@ package config_test
 import (
 	"testing"
 
-	"github.com/riposo/riposo/internal/config"
-
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/internal/config"
 )
 
 var _ = Describe("Config", func() {
 	It("parses", func() {
-		conf, err := config.Parse()
+		conf, err := Parse()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(conf).To(BeAssignableToTypeOf(&config.Config{}))
+		Expect(conf).To(BeAssignableToTypeOf(&Config{}))
 	})
 })
 

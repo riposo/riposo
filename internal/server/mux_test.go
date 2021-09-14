@@ -5,10 +5,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/riposo/riposo/internal/server"
-
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/internal/server"
 )
 
 var _ = Describe("Muxer", func() {
@@ -21,7 +20,7 @@ var _ = Describe("Muxer", func() {
 	}
 
 	BeforeEach(func() {
-		subject = server.NewMux()
+		subject = NewMux()
 	})
 
 	It("redirects to /v1 scope", func() {

@@ -9,12 +9,12 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/riposo/riposo/internal/batch"
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/schema"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/internal/batch"
 )
 
 var _ = Describe("Handler", func() {
@@ -22,7 +22,7 @@ var _ = Describe("Handler", func() {
 	var w *httptest.ResponseRecorder
 
 	BeforeEach(func() {
-		subject = batch.Handler("/v1", mockMux)
+		subject = Handler("/v1", mockMux)
 		w = httptest.NewRecorder()
 	})
 

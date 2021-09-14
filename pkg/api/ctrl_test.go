@@ -6,18 +6,19 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	. "github.com/bsm/ginkgo"
-	. "github.com/bsm/gomega"
 	"github.com/bsm/gomega/types"
-	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/riposo"
+
+	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
 var _ = Describe("Routes.Resource", func() {
-	var subject *api.Routes
-	var txn *api.Txn
+	var subject *Routes
+	var txn *Txn
 
 	var (
 		alice  = mock.User("account:alice", "principal:team")
@@ -54,14 +55,14 @@ var _ = Describe("Routes.Resource", func() {
 		txn.User = alice
 
 		// init config
-		cfg := &api.Config{
+		cfg := &Config{
 			// grant resource:create to team members
-			Guard: api.Guard{"resource:create": {"principal:team"}},
+			Guard: Guard{"resource:create": {"principal:team"}},
 		}
 		cfg.Pagination.MaxLimit = 3
 
 		// setup routes and compile
-		subject = api.NewRoutes(cfg)
+		subject = NewRoutes(cfg)
 		subject.Resource("/resources", nil)
 		subject.Resource("/resources/{resourceID}/nested", nil)
 	})

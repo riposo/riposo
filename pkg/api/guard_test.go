@@ -4,16 +4,16 @@ import (
 	"context"
 
 	memory "github.com/riposo/riposo/internal/conn/memory/permission"
-	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/riposo"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
 var _ = Describe("Guard", func() {
-	var subject api.Guard
+	var subject Guard
 	var backend permission.Backend
 	var tx permission.Transaction
 	var ctx = context.Background()
@@ -24,7 +24,7 @@ var _ = Describe("Guard", func() {
 
 	BeforeEach(func() {
 		backend = memory.New()
-		subject = api.Guard{
+		subject = Guard{
 			"static:create": {"system.Authenticated"},
 		}
 

@@ -3,7 +3,6 @@ package group_test
 import (
 	"testing"
 
-	"github.com/riposo/riposo/internal/model/group"
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/mock"
@@ -12,6 +11,7 @@ import (
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/internal/model/group"
 )
 
 var _ = Describe("Group Model", func() {
@@ -20,7 +20,7 @@ var _ = Describe("Group Model", func() {
 
 	BeforeEach(func() {
 		txn = mock.Txn()
-		subject = group.Model{}
+		subject = Model{}
 	})
 
 	AfterEach(func() {

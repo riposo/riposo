@@ -29,7 +29,7 @@ func newRequest(req *http.Request) *request {
 
 type controller struct {
 	mod   Model
-	hooks *Hooks
+	hooks *hookRegistry
 	cfg   *Config
 }
 
