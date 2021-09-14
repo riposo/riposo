@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/riposo/riposo/internal/bufferpool"
 	"github.com/riposo/riposo/pkg/schema"
-	"github.com/valyala/bytebufferpool"
 )
 
 type customStatus interface {
@@ -48,8 +48,8 @@ func renderError(w http.ResponseWriter, err error) {
 }
 
 func render(w http.ResponseWriter, code int, v interface{}) error {
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
+	buf := bufferpool.Get()
+	defer bufferpool.Put(buf)
 
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(true)
