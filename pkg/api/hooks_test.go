@@ -7,14 +7,15 @@ import (
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/ginkgo/extensions/table"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
-var _ = Describe("Hooks", func() {
-	var subject *api.Hooks
+var _ = Describe("HookRegistry", func() {
+	var subject HookRegistry
 	var h1, h2 = &mockHook{ID: 1}, &mockHook{ID: 2}
 
 	BeforeEach(func() {
-		subject = new(api.Hooks)
+		subject = NewHookRegistry()
 
 		subject.Register([]string{
 			"/buckets/*/collections/mock/*/**",

@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riposo/riposo/internal/batch"
+	. "github.com/riposo/riposo/internal/batch"
 )
 
 func BenchmarkHandle(b *testing.B) {
-	handler := batch.Handler("/v1", mockMux)
+	handler := Handler("/v1", mockMux)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

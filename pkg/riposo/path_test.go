@@ -3,28 +3,27 @@ package riposo_test
 import (
 	"testing"
 
-	"github.com/riposo/riposo/pkg/riposo"
-
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/riposo"
 )
 
 var _ = Describe("Path", func() {
-	var subject riposo.Path
+	var subject Path
 
 	BeforeEach(func() {
-		subject = riposo.Path("/buckets/foo/collections/bar/records/baz")
+		subject = Path("/buckets/foo/collections/bar/records/baz")
 	})
 
 	It("parses from URL path", func() {
-		Expect(riposo.NormPath("/v1/buckets").String()).To(Equal("/buckets/*"))
-		Expect(riposo.NormPath("/v1/buckets/foo").String()).To(Equal("/buckets/foo"))
-		Expect(riposo.NormPath("/v1").String()).To(Equal(""))
-		Expect(riposo.NormPath("").String()).To(Equal(""))
+		Expect(NormPath("/v1/buckets").String()).To(Equal("/buckets/*"))
+		Expect(NormPath("/v1/buckets/foo").String()).To(Equal("/buckets/foo"))
+		Expect(NormPath("/v1").String()).To(Equal(""))
+		Expect(NormPath("").String()).To(Equal(""))
 
-		Expect(riposo.NormPath("/versions").String()).To(Equal("/versions/*"))
-		Expect(riposo.NormPath("/buckets").String()).To(Equal("/buckets/*"))
-		Expect(riposo.NormPath("/buckets/foo").String()).To(Equal("/buckets/foo"))
+		Expect(NormPath("/versions").String()).To(Equal("/versions/*"))
+		Expect(NormPath("/buckets").String()).To(Equal("/buckets/*"))
+		Expect(NormPath("/buckets/foo").String()).To(Equal("/buckets/foo"))
 	})
 
 	It("calculates parent", func() {
@@ -36,7 +35,7 @@ var _ = Describe("Path", func() {
 
 	It("extracts object ID", func() {
 		Expect(subject.ObjectID()).To(Equal("baz"))
-		Expect(riposo.Path("/").ObjectID()).To(Equal(""))
+		Expect(Path("/").ObjectID()).To(Equal(""))
 	})
 
 	It("extracts resource name", func() {
@@ -45,8 +44,8 @@ var _ = Describe("Path", func() {
 		Expect(subject.Parent().Parent().ResourceName()).To(Equal("bucket"))
 		Expect(subject.Parent().Parent().Parent().ResourceName()).To(Equal(""))
 
-		Expect(riposo.Path("/").ResourceName()).To(Equal(""))
-		Expect(riposo.Path("/sheep/*").ResourceName()).To(Equal("sheep"))
+		Expect(Path("/").ResourceName()).To(Equal(""))
+		Expect(Path("/sheep/*").ResourceName()).To(Equal("sheep"))
 	})
 
 	It("replaces object ID", func() {
@@ -54,30 +53,30 @@ var _ = Describe("Path", func() {
 	})
 
 	It("checks if path is a node", func() {
-		Expect(riposo.Path("/buckets/foo").IsNode()).To(BeFalse())
-		Expect(riposo.Path("").IsNode()).To(BeFalse())
-		Expect(riposo.Path("/buckets/*").IsNode()).To(BeTrue())
+		Expect(Path("/buckets/foo").IsNode()).To(BeFalse())
+		Expect(Path("").IsNode()).To(BeFalse())
+		Expect(Path("/buckets/*").IsNode()).To(BeTrue())
 	})
 
 	It("checks if a path contains another", func() {
-		Expect(riposo.Path("").Contains(riposo.Path(""))).To(BeTrue())
-		Expect(riposo.Path("/buckets/foo").Contains(riposo.Path("/buckets/foo"))).To(BeTrue())
-		Expect(riposo.Path("/buckets/*").Contains(riposo.Path("/buckets/foo"))).To(BeTrue())
-		Expect(riposo.Path("*").Contains(riposo.Path(""))).To(BeTrue())
+		Expect(Path("").Contains(Path(""))).To(BeTrue())
+		Expect(Path("/buckets/foo").Contains(Path("/buckets/foo"))).To(BeTrue())
+		Expect(Path("/buckets/*").Contains(Path("/buckets/foo"))).To(BeTrue())
+		Expect(Path("*").Contains(Path(""))).To(BeTrue())
 
-		Expect(riposo.Path("").Contains(riposo.Path("*"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/foo").Contains(riposo.Path("/buckets/*"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/foo").Contains(riposo.Path("/muppets/foo"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/foo").Contains(riposo.Path("/buckets/baz"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/foo").Contains(riposo.Path("/buckets/foo/collections/bar"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/*").Contains(riposo.Path("/buckets/foo/collections/bar"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/*").Contains(riposo.Path("/buckets/foo/collections/*"))).To(BeFalse())
-		Expect(riposo.Path("/buckets/*").Contains(riposo.Path("*"))).To(BeFalse())
+		Expect(Path("").Contains(Path("*"))).To(BeFalse())
+		Expect(Path("/buckets/foo").Contains(Path("/buckets/*"))).To(BeFalse())
+		Expect(Path("/buckets/foo").Contains(Path("/muppets/foo"))).To(BeFalse())
+		Expect(Path("/buckets/foo").Contains(Path("/buckets/baz"))).To(BeFalse())
+		Expect(Path("/buckets/foo").Contains(Path("/buckets/foo/collections/bar"))).To(BeFalse())
+		Expect(Path("/buckets/*").Contains(Path("/buckets/foo/collections/bar"))).To(BeFalse())
+		Expect(Path("/buckets/*").Contains(Path("/buckets/foo/collections/*"))).To(BeFalse())
+		Expect(Path("/buckets/*").Contains(Path("*"))).To(BeFalse())
 	})
 
 	It("traverses", func() {
 		var seen []string
-		subject.Traverse(func(p riposo.Path) {
+		subject.Traverse(func(p Path) {
 			seen = append(seen, p.String())
 		})
 		Expect(seen).To(Equal([]string{
@@ -90,7 +89,7 @@ var _ = Describe("Path", func() {
 })
 
 func BenchmarkPath_ResourceName(b *testing.B) {
-	path := riposo.Path("/buckets/foo/collections/bar")
+	path := Path("/buckets/foo/collections/bar")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

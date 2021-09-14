@@ -3,17 +3,16 @@ package util_test
 import (
 	"encoding/json"
 
-	"github.com/riposo/riposo/pkg/util"
-
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/util"
 )
 
 var _ = Describe("Set", func() {
-	var subject util.Set
+	var subject Set
 
 	BeforeEach(func() {
-		subject = util.NewSet("a", "c", "b")
+		subject = NewSet("a", "c", "b")
 	})
 
 	It("returns sorted slice", func() {
@@ -46,14 +45,14 @@ var _ = Describe("Set", func() {
 	})
 
 	It("checks for intersections", func() {
-		Expect(subject.IntersectsWith(util.NewSet("b", "d"))).To(BeTrue())
-		Expect(subject.IntersectsWith(util.NewSet("c", "a"))).To(BeTrue())
-		Expect(subject.IntersectsWith(util.NewSet("x", "y"))).To(BeFalse())
-		Expect(subject.IntersectsWith(util.NewSet())).To(BeFalse())
+		Expect(subject.IntersectsWith(NewSet("b", "d"))).To(BeTrue())
+		Expect(subject.IntersectsWith(NewSet("c", "a"))).To(BeTrue())
+		Expect(subject.IntersectsWith(NewSet("x", "y"))).To(BeFalse())
+		Expect(subject.IntersectsWith(NewSet())).To(BeFalse())
 	})
 
 	It("constructs unions", func() {
-		union := util.NewUnion(subject, util.NewSet("b", "x"))
+		union := NewUnion(subject, NewSet("b", "x"))
 		Expect(subject.Len()).To(Equal(3))
 		Expect(union.Slice()).To(Equal([]string{"a", "b", "c", "x"}))
 	})
@@ -61,11 +60,11 @@ var _ = Describe("Set", func() {
 	It("marshals/unmarshals", func() {
 		Expect(json.Marshal(subject)).To(MatchJSON(`["a", "b", "c"]`))
 
-		var s1 util.Set
+		var s1 Set
 		Expect(json.Unmarshal([]byte(`["b", "a", "c"]`), &s1)).To(Succeed())
 		Expect(s1).To(Equal(subject))
 
-		var s2 util.Set
+		var s2 Set
 		Expect(json.Unmarshal([]byte(`{"b": {}, "a": {}, "c": {}}`), &s2)).To(Succeed())
 		Expect(s1).To(Equal(subject))
 	})

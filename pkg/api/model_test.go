@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/riposo"
@@ -9,11 +8,12 @@ import (
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
 var _ = Describe("Model", func() {
-	var subject api.Model
-	var txn *api.Txn
+	var subject Model
+	var txn *Txn
 
 	resource := func() *schema.Resource {
 		return &schema.Resource{
@@ -24,7 +24,7 @@ var _ = Describe("Model", func() {
 	BeforeEach(func() {
 		txn = mock.Txn()
 		txn.User = mock.User("alice")
-		subject = api.DefaultModel{}
+		subject = DefaultModel{}
 	})
 
 	AfterEach(func() {
@@ -167,7 +167,7 @@ var _ = Describe("Model", func() {
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			nested := api.DefaultModel{}
+			nested := DefaultModel{}
 
 			// seed /objects/EPR.ID
 			Expect(subject.Create(txn, "/objects/*", resource())).To(Succeed())
@@ -215,7 +215,7 @@ var _ = Describe("Model", func() {
 
 	Describe("DeleteAll", func() {
 		BeforeEach(func() {
-			nested := api.DefaultModel{}
+			nested := DefaultModel{}
 
 			// seed:
 			//   /objects/EPR.ID

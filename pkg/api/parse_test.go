@@ -8,10 +8,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/riposo/riposo/pkg/api"
-
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
+	. "github.com/riposo/riposo/pkg/api"
 )
 
 var _ = Describe("Parse", func() {
@@ -22,7 +21,7 @@ var _ = Describe("Parse", func() {
 	It("parses plain", func() {
 		v := new(target)
 		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"status":"PLAIN OK"}`))
-		Expect(api.Parse(r, v)).To(Succeed())
+		Expect(Parse(r, v)).To(Succeed())
 		Expect(v).To(Equal(&target{Status: "PLAIN OK"}))
 	})
 
@@ -35,7 +34,7 @@ var _ = Describe("Parse", func() {
 		v := new(target)
 		r := httptest.NewRequest(http.MethodPost, "/", b)
 		r.Header.Set("Content-Encoding", "gzip")
-		Expect(api.Parse(r, v)).To(Succeed())
+		Expect(Parse(r, v)).To(Succeed())
 		Expect(v).To(Equal(&target{Status: "GZIP OK"}))
 	})
 
@@ -49,17 +48,17 @@ var _ = Describe("Parse", func() {
 		v := new(target)
 		r := httptest.NewRequest(http.MethodPost, "/", b)
 		r.Header.Set("Content-Encoding", "flate")
-		Expect(api.Parse(r, v)).To(Succeed())
+		Expect(Parse(r, v)).To(Succeed())
 		Expect(v).To(Equal(&target{Status: "FLATE OK"}))
 	})
 
 	It("may return schema compatible errors", func() {
 		v := new(target)
 		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`not even JSON`))
-		Expect(api.Parse(r, v)).To(MatchError(`body: Invalid JSON`))
+		Expect(Parse(r, v)).To(MatchError(`body: Invalid JSON`))
 
 		r = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`not a GZIP encoded payload`))
 		r.Header.Set("Content-Encoding", "gzip")
-		Expect(api.Parse(r, v)).To(MatchError(`body: Invalid gzip encoding`))
+		Expect(Parse(r, v)).To(MatchError(`body: Invalid gzip encoding`))
 	})
 })

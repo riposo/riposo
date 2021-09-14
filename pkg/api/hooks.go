@@ -62,18 +62,18 @@ func (NoopHook) AfterDeleteAll(_ *Txn, _ riposo.Path, _ []string, _ riposo.Epoch
 
 // --------------------------------------------------------------------
 
-// Hooks registers callbacks with patterns.
-type Hooks struct {
-	hooks []hookWG
+// hookRegistry registers callbacks with patterns.
+type hookRegistry struct {
+	hooks []hook
 }
 
 // Len returns the number of registered hooks.
-func (r *Hooks) Len() int {
+func (r *hookRegistry) Len() int {
 	return len(r.hooks)
 }
 
 // Register registers callbacks with glob patterns.
-func (r *Hooks) Register(patterns []string, callbacks Hook) {
+func (r *hookRegistry) Register(patterns []string, callbacks Hook) {
 	globs := make([]hookGlob, 0, len(patterns))
 	for _, pat := range patterns {
 		glob := parseHookGlob(pat)
@@ -85,18 +85,18 @@ func (r *Hooks) Register(patterns []string, callbacks Hook) {
 		return
 	}
 
-	r.hooks = append(r.hooks, hookWG{
+	r.hooks = append(r.hooks, hook{
 		globs: globs,
 		Hook:  callbacks,
 	})
 }
 
 // ForEach iterates over registered callbacks for a given path.
-func (r *Hooks) ForEach(path riposo.Path, fn func(Hook) error) error {
+func (r *hookRegistry) ForEach(path riposo.Path, fn func(Hook) error) error {
 	s := path.String()
-	for _, wp := range r.hooks {
-		if wp.Match(s) {
-			if err := fn(wp.Hook); err != nil {
+	for _, h := range r.hooks {
+		if h.Match(s) {
+			if err := fn(h.Hook); err != nil {
 				return err
 			}
 		}
@@ -104,13 +104,13 @@ func (r *Hooks) ForEach(path riposo.Path, fn func(Hook) error) error {
 	return nil
 }
 
-type hookWG struct {
+type hook struct {
 	globs []hookGlob
 	Hook
 }
 
-func (wp hookWG) Match(s string) (include bool) {
-	for _, pat := range wp.globs {
+func (h hook) Match(s string) (include bool) {
+	for _, pat := range h.globs {
 		// skip if we already have an inclusion match
 		if include && !pat.exclude {
 			continue

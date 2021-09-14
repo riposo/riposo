@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/riposo/riposo/pkg/schema"
+	. "github.com/riposo/riposo/pkg/schema"
 )
 
 func BenchmarkObject_MarshalJSON(b *testing.B) {
-	o := &schema.Object{
+	o := &Object{
 		ID:      "EPR.ID",
 		ModTime: 1567815678988,
 		Extra:   []byte(`{"meta": true}`),
@@ -29,7 +29,7 @@ func BenchmarkObject_UnmarshalJSON(b *testing.B) {
 		"meta": true
 	}`
 	var data []byte
-	var o schema.Object
+	var o Object
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -48,8 +48,8 @@ func BenchmarkObject_Patch(b *testing.B) {
 		"d": [9, "o"],
 		"e": {"x": 1, "y": 3}
 	}`)
-	o1 := &schema.Object{Extra: append([]byte{}, d1...)}
-	o2 := &schema.Object{Extra: []byte(`{
+	o1 := &Object{Extra: append([]byte{}, d1...)}
+	o2 := &Object{Extra: []byte(`{
 		"a": "ok",
 		"d": [false, 8],
 		"e": {"y": 2, "z": 3},

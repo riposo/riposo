@@ -1,67 +1,67 @@
 package params_test
 
 import (
-	"github.com/riposo/riposo/pkg/params"
 	"github.com/riposo/riposo/pkg/schema"
+	"github.com/tidwall/gjson"
 
 	. "github.com/bsm/ginkgo"
 	. "github.com/bsm/gomega"
-	"github.com/tidwall/gjson"
+	. "github.com/riposo/riposo/pkg/params"
 )
 
 var _ = Describe("Filter", func() {
 	It("parses", func() {
-		Expect(params.ParseFilter("field", "value")).To(Equal(params.Filter{
+		Expect(ParseFilter("field", "value")).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEQ,
+			Operator: OperatorEQ,
 			Values:   []schema.Value{{Type: gjson.String, Raw: `"value"`, Str: "value"}},
 		}))
 
-		Expect(params.ParseFilter("field", `"value"`)).To(Equal(params.Filter{
+		Expect(ParseFilter("field", `"value"`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEQ,
+			Operator: OperatorEQ,
 			Values:   []schema.Value{{Type: gjson.String, Raw: `"value"`, Str: "value"}},
 		}))
 
-		Expect(params.ParseFilter("field", `null`)).To(Equal(params.Filter{
+		Expect(ParseFilter("field", `null`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEQ,
+			Operator: OperatorEQ,
 			Values:   []schema.Value{{Type: gjson.Null, Raw: `null`}},
 		}))
 
-		Expect(params.ParseFilter("field", `1,2,3`)).To(Equal(params.Filter{
+		Expect(ParseFilter("field", `1,2,3`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEQ,
+			Operator: OperatorEQ,
 			Values:   []schema.Value{{Type: gjson.Number, Raw: `1`, Num: 1}},
 		}))
 
-		Expect(params.ParseFilter("field", ``)).To(Equal(params.Filter{
+		Expect(ParseFilter("field", ``)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEQ,
+			Operator: OperatorEQ,
 			Values:   []schema.Value{{Type: gjson.Null, Raw: `null`}},
 		}))
 
-		Expect(params.ParseFilter("not_field", `true`)).To(Equal(params.Filter{
+		Expect(ParseFilter("not_field", `true`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorNOT,
+			Operator: OperatorNOT,
 			Values:   []schema.Value{{Type: gjson.True, Raw: "true"}},
 		}))
 
-		Expect(params.ParseFilter("has_field", `true`)).To(Equal(params.Filter{
+		Expect(ParseFilter("has_field", `true`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorHAS,
+			Operator: OperatorHAS,
 			Values:   []schema.Value{{Type: gjson.True, Raw: "true"}},
 		}))
 
-		Expect(params.ParseFilter("gt_field.sub", `5`)).To(Equal(params.Filter{
+		Expect(ParseFilter("gt_field.sub", `5`)).To(Equal(Filter{
 			Field:    "field.sub",
-			Operator: params.OperatorGT,
+			Operator: OperatorGT,
 			Values:   []schema.Value{{Type: gjson.Number, Raw: "5", Num: 5}},
 		}))
 
-		Expect(params.ParseFilter("in_field", `a,null,b,,c`)).To(Equal(params.Filter{
+		Expect(ParseFilter("in_field", `a,null,b,,c`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorIN,
+			Operator: OperatorIN,
 			Values: []schema.Value{
 				{Type: gjson.String, Raw: `"a"`, Str: "a"},
 				{Type: gjson.Null, Raw: `null`},
@@ -71,9 +71,9 @@ var _ = Describe("Filter", func() {
 			},
 		}))
 
-		Expect(params.ParseFilter("exclude_field", `1,2,true`)).To(Equal(params.Filter{
+		Expect(ParseFilter("exclude_field", `1,2,true`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorEXCLUDE,
+			Operator: OperatorEXCLUDE,
 			Values: []schema.Value{
 				{Type: gjson.Number, Raw: `1`, Num: 1},
 				{Type: gjson.Number, Raw: `2`, Num: 2},
@@ -81,9 +81,9 @@ var _ = Describe("Filter", func() {
 			},
 		}))
 
-		Expect(params.ParseFilter("contains_any_field", `x,y,z`)).To(Equal(params.Filter{
+		Expect(ParseFilter("contains_any_field", `x,y,z`)).To(Equal(Filter{
 			Field:    "field",
-			Operator: params.OperatorContainsAny,
+			Operator: OperatorContainsAny,
 			Values: []schema.Value{
 				{Type: gjson.String, Raw: `"x"`, Str: "x"},
 				{Type: gjson.String, Raw: `"y"`, Str: "y"},
