@@ -10,7 +10,7 @@ require (
 	github.com/bsm/gomega v1.16.0
 	github.com/bsm/minisql v0.1.0
 	github.com/bsm/nanoid v0.1.0
-	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/chi/v5 v5.0.4
 	github.com/go-chi/cors v1.2.0
 	github.com/google/subcommands v1.2.0
 	github.com/google/uuid v1.3.0
@@ -18,7 +18,6 @@ require (
 	github.com/lib/pq v1.10.3
 	github.com/tidwall/gjson v1.9.0
 	github.com/tidwall/sjson v1.1.7
-	github.com/valyala/bytebufferpool v1.0.0
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 )

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi"
-	chimw "github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/riposo/riposo/internal/batch"
 	"github.com/riposo/riposo/internal/config"
