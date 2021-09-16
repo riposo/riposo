@@ -220,6 +220,26 @@ var _ = Describe("Routes.Resource", func() {
 				"message": "Resource was modified meanwhile"
 			}`))
 		})
+
+		It("only deletes writable resources", func() {
+			// seed delta, writable by bob
+			ExpectWithOffset(1, handle(http.MethodPost, "/resources", `{
+				"data": {"id":"delta"},
+				"permissions": {"write":["account:bob"]}
+			}`).Code).To(Equal(http.StatusCreated))
+
+			// as bob
+			txn.User = bob
+			Expect(handle(http.MethodDelete, "/resources?_sort=last_modified", ``)).To(MatchResponse(http.StatusOK, map[string]string{
+				"Content-Type":  "application/json; charset=utf-8",
+				"Etag":          `"1515151515681"`,
+				"Last-Modified": "Fri, 05 Jan 2018 11:25:15 GMT",
+			}, `{
+				"data": [
+					{"id": "delta", "last_modified": 1515151515681, "deleted": true}
+				]
+			}`))
+		})
 	})
 
 	Describe("GET /resource/ID", func() {
