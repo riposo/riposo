@@ -1,3 +1,5 @@
 linters-settings:
   errcheck:
-    ignore: "fmt:.*,Rollback,github.com/riposo/riposo/pkg/api:Abort"
+    exclude-functions:
+      - (*github.com/riposo/riposo/pkg/api.Txn).Abort
+      - (github.com/riposo/riposo/pkg/conn/storage.Transaction).Rollback

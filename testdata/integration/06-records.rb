@@ -335,4 +335,24 @@ RSpec.describe 'records' do
     get '/v1/buckets/unknown/collections/unknown/records/record'
     expect(response.status).to eq(403)
   end
+
+  it 'DELETE /v1/buckets/ID/collections/ID/records' do
+    # delete all writable records
+    delete "/v1/buckets/#{bucket}/collections/collection/records"
+    expect(response.status).to eq(200)
+    expect(response.data).to match(
+      data: match_array([
+        {
+          deleted: true,
+          id: 'record',
+          last_modified: just_now,
+        },
+        {
+          deleted: true,
+          id: an_instance_of(String),
+          last_modified: just_now,
+        },
+      ]),
+    )
+  end
 end
