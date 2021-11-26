@@ -36,10 +36,23 @@ var _ = Describe("Muxer", func() {
 	It("exposes default headers", func() {
 		w := serve(httptest.NewRequest(http.MethodGet, "/v1/__lbheartbeat__", nil))
 		Expect(w.Header()).To(Equal(http.Header{
+			"Backoff":                 []string{"60"},
 			"Content-Type":            []string{"application/json; charset=utf-8"},
 			"Content-Security-Policy": []string{"default-src 'none'; frame-ancestors 'none'; base-uri 'none';"},
-			"X-Content-Type-Options":  []string{"nosniff"},
 			"Vary":                    []string{"Origin"},
+			"X-Content-Type-Options":  []string{"nosniff"},
+		}))
+	})
+
+	It("handles internal errors", func() {
+		w := serve(httptest.NewRequest(http.MethodGet, "/v1/failure", nil))
+		Expect(w.Code).To(Equal(http.StatusInternalServerError))
+		Expect(w.Header()).To(Equal(http.Header{
+			"Content-Type":            []string{"application/json; charset=utf-8"},
+			"Content-Security-Policy": []string{"default-src 'none'; frame-ancestors 'none'; base-uri 'none';"},
+			"Retry-After":             []string{"30"},
+			"Vary":                    []string{"Origin"},
+			"X-Content-Type-Options":  []string{"nosniff"},
 		}))
 	})
 
