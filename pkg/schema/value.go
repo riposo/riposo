@@ -27,10 +27,11 @@ func ParseValue(s string) Value {
 		return Value{Raw: "null"}
 	}
 
-	if res := gjson.Parse(s); res.Raw != "" {
-		return Value(res)
+	if gjson.Valid(s) {
+		if res := gjson.Parse(s); res.Raw != "" {
+			return Value(res)
+		}
 	}
-
 	return StringValue(s)
 }
 
