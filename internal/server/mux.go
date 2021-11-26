@@ -39,6 +39,11 @@ func newMux(rts *api.Routes, cns *conn.Set, hlp *riposo.Helpers, cfg *config.Con
 	m.Use(chimw.SetHeader("X-Content-Type-Options", "nosniff"))
 	m.Use(cors.Handler(configCORS(m.cfg)))
 
+	// use backoff middleware
+	if cfg.Backoff != 0 || cfg.RetryAfter != 0 {
+		m.Use(backoff(cfg.Backoff, cfg.BackoffPercentage, cfg.RetryAfter))
+	}
+
 	// custom error handlers
 	m.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		api.Render(w, schema.NotFound)

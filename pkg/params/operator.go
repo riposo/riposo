@@ -3,6 +3,36 @@ package params
 // Operator is an enum type.
 type Operator uint8
 
+func (o Operator) String() string {
+	switch o {
+	case OperatorLT:
+		return "<"
+	case OperatorMIN:
+		return ">="
+	case OperatorMAX:
+		return "<="
+	case OperatorNOT:
+		return "!="
+	case OperatorEQ:
+		return "=="
+	case OperatorGT:
+		return ">"
+	case OperatorIN:
+		return "IN"
+	case OperatorEXCLUDE:
+		return "NOT IN"
+	case OperatorLIKE:
+		return "=~"
+	case OperatorHAS:
+		return "HAS"
+	case OperatorContains:
+		return "CONTAINS"
+	case OperatorContainsAny:
+		return "CONTAINS ANY"
+	}
+	return "?"
+}
+
 // Operator enum values.
 const (
 	OperatorLT Operator = iota + 1

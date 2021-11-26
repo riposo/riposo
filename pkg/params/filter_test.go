@@ -32,7 +32,7 @@ var _ = Describe("Filter", func() {
 		Expect(ParseFilter("field", `1,2,3`)).To(Equal(Filter{
 			Field:    "field",
 			Operator: OperatorEQ,
-			Values:   []schema.Value{{Type: gjson.Number, Raw: `1`, Num: 1}},
+			Values:   []schema.Value{{Type: gjson.String, Raw: `"1,2,3"`, Str: "1,2,3"}},
 		}))
 
 		Expect(ParseFilter("field", ``)).To(Equal(Filter{

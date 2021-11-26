@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/riposo/riposo/pkg/auth"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/plugin"
+	"github.com/riposo/riposo/pkg/schema"
 )
 
 // NewMux inits a new handler for tests.
@@ -25,9 +27,14 @@ func NewMux() http.Handler {
 	cfg.Pagination.TokenValidity = time.Hour
 	cfg.EOS.Time = time.Unix(2424242424, 0)
 	cfg.Capabilities = new(plugin.Set)
+	cfg.Backoff = 60 * time.Second
+	cfg.RetryAfter = 30 * time.Second
 
 	rts := api.NewRoutes(cfg.APIConfig())
 	rts.Resource("/buckets", nil)
+	rts.Handle("/failure", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.Render(w, schema.InternalError(fmt.Errorf("doh!")))
+	}))
 
 	return newMux(rts, cns, hlp, cfg, mockAuth{})
 }

@@ -48,6 +48,10 @@ type Config struct {
 		MaxLimit      int           `default:"10000" split_words:"true"`
 	}
 
+	Backoff           time.Duration
+	BackoffPercentage int           `split_words:"true"`
+	RetryAfter        time.Duration `default:"30s" split_words:"true"`
+
 	Server struct {
 		Addr            string        `default:":8888"`
 		ReadTimeout     time.Duration `default:"60s" split_words:"true"`
