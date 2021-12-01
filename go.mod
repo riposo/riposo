@@ -9,7 +9,7 @@ require (
 	github.com/bsm/ginkgo v1.16.5
 	github.com/bsm/gomega v1.17.0
 	github.com/bsm/minisql v0.3.0
-	github.com/bsm/nanoid v0.1.0
+	github.com/bsm/nanoid v0.2.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-chi/cors v1.2.0
 	github.com/google/subcommands v1.2.0
