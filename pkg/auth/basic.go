@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Register("basic", func(_ *riposo.Helpers) (Method, error) {
+	Register("basic", func(_ riposo.Helpers) (Method, error) {
 		return Basic(), nil
 	})
 }

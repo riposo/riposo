@@ -88,7 +88,7 @@ func (w *backoffWrapper) showRetryAfter() bool {
 // ----------------------------------------------------------------------------
 
 // Combined middleware to create transactions and authenticate users.
-func transactional(cns *conn.Set, hlp *riposo.Helpers, am auth.Method) func(http.Handler) http.Handler {
+func transactional(cns *conn.Set, hlp riposo.Helpers, am auth.Method) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// init transaction

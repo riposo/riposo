@@ -1,0 +1,13 @@
+pagination:
+  max_limit: 100
+server:
+  address: :8889
+  shutdown_timeout: 10s
+temp:
+  dir: /dev/shm
+eos:
+  time: 2042-12-24T17:29:37Z
+permission:
+  defaults:
+    bucket:create: [system.Authenticated]
+    bucket:read: [bar, foo]

@@ -19,11 +19,11 @@ import (
 type mux struct {
 	*chi.Mux
 	cns *conn.Set
-	hlp *riposo.Helpers
+	hlp riposo.Helpers
 	cfg *config.Config
 }
 
-func newMux(rts *api.Routes, cns *conn.Set, hlp *riposo.Helpers, cfg *config.Config, auth auth.Method) http.Handler {
+func newMux(rts *api.Routes, cns *conn.Set, hlp riposo.Helpers, cfg *config.Config, auth auth.Method) http.Handler {
 	m := &mux{
 		Mux: chi.NewMux(),
 		cns: cns,
@@ -40,8 +40,8 @@ func newMux(rts *api.Routes, cns *conn.Set, hlp *riposo.Helpers, cfg *config.Con
 	m.Use(cors.Handler(configCORS(m.cfg)))
 
 	// use backoff middleware
-	if cfg.Backoff != 0 || cfg.RetryAfter != 0 {
-		m.Use(backoff(cfg.Backoff, cfg.BackoffPercentage, cfg.RetryAfter))
+	if cfg.Backoff.Duration != 0 || cfg.RetryAfter != 0 {
+		m.Use(backoff(cfg.Backoff.Duration, cfg.Backoff.Percentage, cfg.RetryAfter))
 	}
 
 	// custom error handlers

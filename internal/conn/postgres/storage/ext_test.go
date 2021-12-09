@@ -5,7 +5,7 @@ import (
 )
 
 // ReloadHelpers is a test helper.
-func (cn *conn) ReloadHelpers(hlp *riposo.Helpers) {
+func (cn *conn) ReloadHelpers(hlp riposo.Helpers) {
 	cn.hlp = hlp
 }
 

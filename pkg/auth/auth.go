@@ -22,7 +22,7 @@ type Method interface {
 }
 
 // Factory initializes a Method at runtime.
-type Factory func(*riposo.Helpers) (Method, error)
+type Factory func(riposo.Helpers) (Method, error)
 
 // --------------------------------------------------------------------
 

@@ -66,7 +66,7 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 	return &Server{
 		srv: &http.Server{
 			Handler:           mux,
-			Addr:              cfg.Server.Addr,
+			Addr:              cfg.Server.Address,
 			ReadHeaderTimeout: time.Second,
 			ReadTimeout:       cfg.Server.ReadTimeout,
 			WriteTimeout:      cfg.Server.WriteTimeout,
@@ -97,7 +97,7 @@ func (s *Server) Close() error {
 
 // --------------------------------------------------------------------
 
-func initAuth(cfg *config.Config, hlp *riposo.Helpers) (auth.Method, error) {
+func initAuth(cfg *config.Config, hlp riposo.Helpers) (auth.Method, error) {
 	sub := make([]auth.Method, 0, len(cfg.Auth.Methods))
 	for _, m := range cfg.Auth.Methods {
 		factory, err := auth.Get(m)
@@ -115,7 +115,7 @@ func initAuth(cfg *config.Config, hlp *riposo.Helpers) (auth.Method, error) {
 	return auth.OneOf(sub...), nil
 }
 
-func establishConns(ctx context.Context, cfg *config.Config, hlp *riposo.Helpers) (*conn.Set, error) {
+func establishConns(ctx context.Context, cfg *config.Config, hlp riposo.Helpers) (*conn.Set, error) {
 	return conn.Connect(
 		ctx,
 		cfg.Storage.URL,

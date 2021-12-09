@@ -12,7 +12,7 @@ import (
 )
 
 // Conns returns an in-memory connections.
-func Conns(hlp *riposo.Helpers) *conn.Set {
+func Conns(hlp riposo.Helpers) *conn.Set {
 	if hlp == nil {
 		hlp = Helpers()
 	}
