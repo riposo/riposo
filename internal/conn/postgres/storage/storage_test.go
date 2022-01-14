@@ -50,7 +50,7 @@ var _ = Describe("Backend", func() {
 // --------------------------------------------------------------------
 
 type reloadable interface {
-	ReloadHelpers(*riposo.Helpers)
+	ReloadHelpers(riposo.Helpers)
 }
 
 var instance storage.Backend

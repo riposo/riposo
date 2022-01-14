@@ -27,7 +27,7 @@ func NewMux() http.Handler {
 	cfg.Pagination.TokenValidity = time.Hour
 	cfg.EOS.Time = time.Unix(2424242424, 0)
 	cfg.Capabilities = new(plugin.Set)
-	cfg.Backoff = 60 * time.Second
+	cfg.Backoff.Duration = 60 * time.Second
 	cfg.RetryAfter = 30 * time.Second
 
 	rts := api.NewRoutes(cfg.APIConfig())
@@ -36,7 +36,7 @@ func NewMux() http.Handler {
 		api.Render(w, schema.InternalError(fmt.Errorf("doh!")))
 	}))
 
-	return newMux(rts, cns, hlp, cfg, mockAuth{})
+	return newMux(rts, hlp, cns, mockAuth{}, cfg)
 }
 
 type mockAuth struct{}

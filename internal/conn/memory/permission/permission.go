@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	permission.Register("memory", func(context.Context, *url.URL, *riposo.Helpers) (permission.Backend, error) {
+	permission.Register("memory", func(context.Context, *url.URL, riposo.Helpers) (permission.Backend, error) {
 		return New(), nil
 	})
 }

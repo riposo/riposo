@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	storage.Register("memory", func(_ context.Context, _ *url.URL, hlp *riposo.Helpers) (storage.Backend, error) {
+	storage.Register("memory", func(_ context.Context, _ *url.URL, hlp riposo.Helpers) (storage.Backend, error) {
 		return New(nil, hlp), nil
 	})
 }
@@ -28,14 +28,14 @@ func (t *updateHandle) Object() *schema.Object { return t.obj }
 
 type backend struct {
 	cc   clock.Clock
-	hlp  *riposo.Helpers
+	hlp  riposo.Helpers
 	tree objectTree
 	dead objectTree
 	mu   sync.RWMutex
 }
 
 // New inits a new in-memory store. Please use for development and testing only!
-func New(cc clock.Clock, hlp *riposo.Helpers) storage.Backend {
+func New(cc clock.Clock, hlp riposo.Helpers) storage.Backend {
 	if cc == nil {
 		cc = clock.New()
 	}

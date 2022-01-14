@@ -14,15 +14,19 @@ import (
 // Server inits a new sub-command.
 func Server() subcommands.Command { return new(serverCmd) }
 
-type serverCmd struct{}
+type serverCmd struct {
+	configFile string
+}
 
-func (*serverCmd) Name() string             { return "server" }
-func (*serverCmd) Synopsis() string         { return "Start HTTP server." }
-func (*serverCmd) Usage() string            { return "server:\n  Start HTTP server.\n" }
-func (*serverCmd) SetFlags(_ *flag.FlagSet) {}
+func (*serverCmd) Name() string     { return "server" }
+func (*serverCmd) Synopsis() string { return "Start HTTP server." }
+func (*serverCmd) Usage() string    { return "server:\n  Start HTTP server.\n" }
+func (c *serverCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.configFile, "config", "", "Optional YAML config file")
+}
 
 func (c *serverCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	cfg, err := config.Parse()
+	cfg, err := config.Parse(c.configFile, nil)
 	if err != nil {
 		failure("invalid configuration: " + err.Error())
 		return subcommands.ExitUsageError

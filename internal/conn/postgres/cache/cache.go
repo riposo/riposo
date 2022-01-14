@@ -19,7 +19,7 @@ const schemaVersion = 1
 var embedFS embed.FS
 
 func init() {
-	cache.Register("postgres", func(ctx context.Context, uri *url.URL, _ *riposo.Helpers) (cache.Backend, error) {
+	cache.Register("postgres", func(ctx context.Context, uri *url.URL, _ riposo.Helpers) (cache.Backend, error) {
 		return Connect(ctx, uri.String())
 	})
 }

@@ -28,7 +28,7 @@ func Use(store storage.Backend, perms permission.Backend, cache cache.Backend) *
 }
 
 // Connect connects to all backends.
-func Connect(ctx context.Context, storeURL, permsURL, cacheURL string, hlp *riposo.Helpers) (*Set, error) {
+func Connect(ctx context.Context, storeURL, permsURL, cacheURL string, hlp riposo.Helpers) (*Set, error) {
 	store, err := storage.Connect(ctx, storeURL, hlp)
 	if err != nil {
 		return nil, err

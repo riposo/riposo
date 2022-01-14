@@ -33,13 +33,13 @@ type Txn struct {
 	Store   storage.Transaction
 	Perms   permission.Transaction
 	Cache   cache.Transaction
-	Helpers *riposo.Helpers
+	Helpers riposo.Helpers
 	User    *User
 	Data    map[string]interface{}
 }
 
 // NewTxn inits a new transaction.
-func NewTxn(ctx context.Context, cns *conn.Set, hlp *riposo.Helpers) (*Txn, error) {
+func NewTxn(ctx context.Context, cns *conn.Set, hlp riposo.Helpers) (*Txn, error) {
 	store, err := cns.Store().Begin(ctx)
 	if err != nil {
 		return nil, err

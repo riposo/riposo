@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	cache.Register("memory", func(context.Context, *url.URL, *riposo.Helpers) (cache.Backend, error) {
+	cache.Register("memory", func(context.Context, *url.URL, riposo.Helpers) (cache.Backend, error) {
 		return New(), nil
 	})
 }

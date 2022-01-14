@@ -58,7 +58,7 @@ var (
 )
 
 // Factory initializes a new backend at runtime.
-type Factory func(context.Context, *url.URL, *riposo.Helpers) (Backend, error)
+type Factory func(context.Context, *url.URL, riposo.Helpers) (Backend, error)
 
 // Register registers a new backend by scheme.
 // It will panic if multiple backends are registered under the same scheme.
@@ -73,7 +73,7 @@ func Register(scheme string, factory Factory) {
 }
 
 // Connect connects a backend via URL.
-func Connect(ctx context.Context, urlString string, hlp *riposo.Helpers) (Backend, error) {
+func Connect(ctx context.Context, urlString string, hlp riposo.Helpers) (Backend, error) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 

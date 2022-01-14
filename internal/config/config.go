@@ -1,13 +1,13 @@
 package config
 
 import (
-	"os"
-	"strings"
 	"time"
 
 	"github.com/riposo/riposo/pkg/api"
+	"github.com/riposo/riposo/pkg/identity"
 	"github.com/riposo/riposo/pkg/plugin"
 	"github.com/riposo/riposo/pkg/riposo"
+	"github.com/riposo/riposo/pkg/slowhash"
 )
 
 // Config configures the server.
@@ -26,14 +26,15 @@ type Config struct {
 		URL string `default:"memory:"`
 	}
 	Permission struct {
-		URL string `default:"memory:"`
+		URL      string `default:"memory:"`
+		Defaults map[string][]string
 	}
 	Cache struct {
 		URL string `default:"memory:"`
 	}
 
 	Batch struct {
-		MaxRequests int `default:"25" split_words:"true"`
+		MaxRequests int `default:"25" yaml:"max_requests"`
 	}
 	Auth struct {
 		Methods []string `default:"basic"`
@@ -41,27 +42,31 @@ type Config struct {
 	}
 	CORS struct {
 		Origins []string      `default:"*"`
-		MaxAge  time.Duration `default:"1h" split_words:"true"`
+		MaxAge  time.Duration `default:"1h" yaml:"max_age"`
 	}
 	Pagination struct {
-		TokenValidity time.Duration `default:"10m"`
-		MaxLimit      int           `default:"10000" split_words:"true"`
+		TokenValidity time.Duration `default:"10m" yaml:"token_validity"`
+		MaxLimit      int           `default:"10000" yaml:"max_limit"`
 	}
 
-	Backoff           time.Duration
-	BackoffPercentage int           `split_words:"true"`
-	RetryAfter        time.Duration `default:"30s" split_words:"true"`
+	Backoff struct {
+		Duration   time.Duration
+		Percentage int
+	}
+	RetryAfter time.Duration `default:"30s" yaml:"retry_after"`
 
 	Server struct {
-		Addr            string        `default:":8888"`
-		ReadTimeout     time.Duration `default:"60s" split_words:"true"`
-		WriteTimeout    time.Duration `default:"60s" split_words:"true"`
-		ShutdownTimeout time.Duration `default:"5s" split_words:"true"`
+		Address         string        `default:":8888"`
+		ReadTimeout     time.Duration `default:"60s" yaml:"read_timeout"`
+		WriteTimeout    time.Duration `default:"60s" yaml:"write_timeout"`
+		ShutdownTimeout time.Duration `default:"5s" yaml:"shutdown_timeout"`
 	}
 
 	Temp struct {
 		Dir string
 	}
+
+	Plugins []string
 
 	// End of Service
 	EOS struct {
@@ -70,27 +75,30 @@ type Config struct {
 		URL     string
 	}
 
-	Plugins      []string
-	Capabilities *plugin.Set `ignored:"true"`
+	// Ignored & private fields
+	Capabilities *plugin.Set `yaml:"-"`
+	parseFunc
 }
 
 // Parse parses the config from environment.
-func Parse() (*Config, error) {
+func Parse(configFile string, env Env) (*Config, error) {
+	parseFunc := newParseFunc(configFile, env)
+
 	var c Config
 	c.Project.Version = riposo.Version
 	c.Capabilities = new(plugin.Set)
 
-	if err := riposo.ParseEnv(&c); err != nil {
+	if err := parseFunc(&c); err != nil {
 		return nil, err
 	}
-
+	c.parseFunc = parseFunc
 	return &c, nil
 }
 
 // APIConfig returns an API config.
 func (c *Config) APIConfig() *api.Config {
 	return &api.Config{
-		Guard: c.parseGuard(),
+		Guard: c.Permission.Defaults,
 		Pagination: (struct {
 			TokenValidity time.Duration
 			MaxLimit      int
@@ -98,30 +106,25 @@ func (c *Config) APIConfig() *api.Config {
 	}
 }
 
-// InitHelpers inits rts helpers.
-func (c *Config) InitHelpers() (*riposo.Helpers, error) {
-	return riposo.NewHelpers(riposo.HelpersOptions{
-		Identity: c.ID.Factory,
-		SlowHash: c.Auth.Hash,
-	})
-}
-
-func (c *Config) parseGuard() api.Guard {
-	static := make(api.Guard)
-	for _, raw := range os.Environ() {
-		if !strings.HasPrefix(raw, "RIPOSO_") {
-			continue
-		}
-
-		pair := strings.SplitN(raw, "=", 2)
-		if len(pair) != 2 || pair[1] == "" || !strings.HasSuffix(pair[0], "_PRINCIPALS") {
-			continue
-		}
-
-		key := strings.TrimSuffix(strings.TrimPrefix(pair[0], "RIPOSO_"), "_PRINCIPALS")
-		key = strings.ReplaceAll(key, "_", ":")
-		key = strings.ToLower(key)
-		static[key] = strings.Split(pair[1], ",")
+// InitHelpers inits helpers.
+func (c *Config) InitHelpers() (riposo.Helpers, error) {
+	if c.parseFunc == nil {
+		panic("config parser is not initialised")
 	}
-	return static
+
+	nextID, err := identity.Get(c.ID.Factory)
+	if err != nil {
+		return nil, err
+	}
+
+	slowHash, err := slowhash.Get(c.Auth.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &helpers{
+		parseConfig: c.parseFunc,
+		nextID:      nextID,
+		slowHash:    slowHash,
+	}, nil
 }
