@@ -23,7 +23,7 @@ type mux struct {
 	cfg *config.Config
 }
 
-func newMux(rts *api.Routes, cns *conn.Set, hlp riposo.Helpers, cfg *config.Config, auth auth.Method) http.Handler {
+func newMux(rts *api.Routes, hlp riposo.Helpers, cns *conn.Set, auth auth.Method, cfg *config.Config) http.Handler {
 	m := &mux{
 		Mux: chi.NewMux(),
 		cns: cns,

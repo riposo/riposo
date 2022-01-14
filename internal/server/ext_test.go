@@ -36,7 +36,7 @@ func NewMux() http.Handler {
 		api.Render(w, schema.InternalError(fmt.Errorf("doh!")))
 	}))
 
-	return newMux(rts, cns, hlp, cfg, mockAuth{})
+	return newMux(rts, hlp, cns, mockAuth{}, cfg)
 }
 
 type mockAuth struct{}

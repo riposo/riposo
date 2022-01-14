@@ -40,27 +40,27 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 	rts.Resource("/buckets/{bucket_id}/collections/{collection_id}/records", nil)
 
 	// init plugins
-	plugins, err := plugin.Init(rts, cfg.Plugins)
+	plugins, err := plugin.Init(rts, hlp, cfg.Plugins)
 	if err != nil {
 		return nil, err
 	}
 	cfg.Capabilities = plugins
 
 	// init auth
-	auth, err := initAuth(cfg, hlp)
+	auth, err := initAuth(hlp, cfg)
 	if err != nil {
 		_ = plugins.Close()
 		return nil, err
 	}
 
-	cns, err := establishConns(ctx, cfg, hlp)
+	cns, err := establishConns(ctx, hlp, cfg)
 	if err != nil {
 		_ = auth.Close()
 		_ = plugins.Close()
 		return nil, err
 	}
 
-	mux := newMux(rts, cns, hlp, cfg, auth)
+	mux := newMux(rts, hlp, cns, auth, cfg)
 	cls := []io.Closer{cns, auth, plugins}
 
 	return &Server{
@@ -97,7 +97,7 @@ func (s *Server) Close() error {
 
 // --------------------------------------------------------------------
 
-func initAuth(cfg *config.Config, hlp riposo.Helpers) (auth.Method, error) {
+func initAuth(hlp riposo.Helpers, cfg *config.Config) (auth.Method, error) {
 	sub := make([]auth.Method, 0, len(cfg.Auth.Methods))
 	for _, m := range cfg.Auth.Methods {
 		factory, err := auth.Get(m)
@@ -115,7 +115,7 @@ func initAuth(cfg *config.Config, hlp riposo.Helpers) (auth.Method, error) {
 	return auth.OneOf(sub...), nil
 }
 
-func establishConns(ctx context.Context, cfg *config.Config, hlp riposo.Helpers) (*conn.Set, error) {
+func establishConns(ctx context.Context, hlp riposo.Helpers, cfg *config.Config) (*conn.Set, error) {
 	return conn.Connect(
 		ctx,
 		cfg.Storage.URL,
