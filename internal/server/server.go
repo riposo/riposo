@@ -14,6 +14,7 @@ import (
 	"github.com/riposo/riposo/pkg/conn"
 	"github.com/riposo/riposo/pkg/plugin"
 	"github.com/riposo/riposo/pkg/riposo"
+	"github.com/riposo/riposo/pkg/rule"
 	"go.uber.org/multierr"
 )
 
@@ -40,28 +41,39 @@ func New(ctx context.Context, cfg *config.Config) (*Server, error) {
 	rts.Resource("/buckets/{bucket_id}/collections/{collection_id}/records", nil)
 
 	// init plugins
-	plugins, err := plugin.Init(rts, hlp, cfg.Plugins)
+	plugins, err := plugin.Init(ctx, rts, hlp, cfg.Plugins)
 	if err != nil {
 		return nil, err
 	}
 	cfg.Capabilities = plugins
 
-	// init auth
-	auth, err := initAuth(hlp, cfg)
+	// init rules
+	rules, err := rule.Init(ctx, rts, hlp, cfg.Rules)
 	if err != nil {
 		_ = plugins.Close()
 		return nil, err
 	}
 
+	// init auth
+	auth, err := initAuth(ctx, hlp, cfg)
+	if err != nil {
+		_ = rules.Close()
+		_ = plugins.Close()
+		return nil, err
+	}
+
+	// establish connections
 	cns, err := establishConns(ctx, hlp, cfg)
 	if err != nil {
 		_ = auth.Close()
+		_ = rules.Close()
 		_ = plugins.Close()
 		return nil, err
 	}
 
+	// init mux
 	mux := newMux(rts, hlp, cns, auth, cfg)
-	cls := []io.Closer{cns, auth, plugins}
+	cls := []io.Closer{cns, auth, rules, plugins}
 
 	return &Server{
 		srv: &http.Server{
@@ -97,7 +109,7 @@ func (s *Server) Close() error {
 
 // --------------------------------------------------------------------
 
-func initAuth(hlp riposo.Helpers, cfg *config.Config) (auth.Method, error) {
+func initAuth(ctx context.Context, hlp riposo.Helpers, cfg *config.Config) (auth.Method, error) {
 	sub := make([]auth.Method, 0, len(cfg.Auth.Methods))
 	for _, m := range cfg.Auth.Methods {
 		factory, err := auth.Get(m)
@@ -105,7 +117,7 @@ func initAuth(hlp riposo.Helpers, cfg *config.Config) (auth.Method, error) {
 			return nil, err
 		}
 
-		method, err := factory(hlp)
+		method, err := factory(ctx, hlp)
 		if err != nil {
 			return nil, err
 		}

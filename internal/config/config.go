@@ -8,6 +8,7 @@ import (
 	"github.com/riposo/riposo/pkg/plugin"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/slowhash"
+	"gopkg.in/yaml.v3"
 )
 
 // Config configures the server.
@@ -67,6 +68,7 @@ type Config struct {
 	}
 
 	Plugins []string
+	Rules   []*yaml.Node
 
 	// End of Service
 	EOS struct {

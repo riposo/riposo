@@ -11,3 +11,8 @@ permission:
   defaults:
     bucket:create: [system.Authenticated]
     bucket:read: [bar, foo]
+rules:
+  - type: foo
+    extra: config
+  - type: bar
+    value: 42

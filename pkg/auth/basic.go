@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/riposo/riposo/pkg/api"
@@ -10,7 +11,7 @@ import (
 )
 
 func init() {
-	Register("basic", func(_ riposo.Helpers) (Method, error) {
+	Register("basic", func(_ context.Context, _ riposo.Helpers) (Method, error) {
 		return Basic(), nil
 	})
 }

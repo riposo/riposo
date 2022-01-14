@@ -56,6 +56,7 @@ var _ = Describe("Config", func() {
 			"bucket:create": {"system.Authenticated"},
 			"bucket:read":   {"bar", "foo"},
 		}))
+		Expect(conf.Rules).To(HaveLen(2))
 		Expect(conf.EOS.Time).To(BeTemporally("==", time.Date(2042, 12, 24, 17, 29, 37, 0, time.UTC)))
 	})
 
