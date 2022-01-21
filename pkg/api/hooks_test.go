@@ -10,12 +10,12 @@ import (
 	. "github.com/riposo/riposo/pkg/api"
 )
 
-var _ = Describe("HookRegistry", func() {
-	var subject HookRegistry
+var _ = Describe("HookChain", func() {
+	var subject HookChain
 	var h1, h2 = &mockHook{ID: 1}, &mockHook{ID: 2}
 
 	BeforeEach(func() {
-		subject = NewHookRegistry()
+		subject = NewHookChain()
 
 		subject.Register([]string{
 			"/buckets/*/collections/mock/*/**",

@@ -98,7 +98,7 @@ func Parse(configFile string, env Env) (*Config, error) {
 // APIConfig returns an API config.
 func (c *Config) APIConfig() *api.Config {
 	return &api.Config{
-		Guard: c.Permission.Defaults,
+		Authz: c.Permission.Defaults,
 		Pagination: (struct {
 			TokenValidity time.Duration
 			MaxLimit      int

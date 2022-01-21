@@ -23,7 +23,7 @@ type Middleware func(http.Handler) http.Handler
 // Routes contains the main API route defintions.
 type Routes struct {
 	mux   *chi.Mux
-	hooks *hookRegistry
+	hooks *hookChain
 	cfg   *Config
 }
 
@@ -34,7 +34,7 @@ func NewRoutes(cfg *Config) *Routes {
 
 	return &Routes{
 		mux:   mux,
-		hooks: new(hookRegistry),
+		hooks: new(hookChain),
 		cfg:   cfg.norm(),
 	}
 }

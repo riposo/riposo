@@ -4,12 +4,13 @@ import (
 	"github.com/riposo/riposo/pkg/conn/permission"
 )
 
-// A Guard represents an authorization guard and can verify
-// access of user principals to target entities.
-type Guard map[string][]string
+// Authz represents an authorization guard and can verify access of user
+// principals to target entities.
+type Authz map[string][]string
 
-// Verify returns true if any of the user principals can access any of the target entities.
-func (v Guard) Verify(tx permission.Transaction, principals []string, target []permission.ACE) (bool, error) {
+// Verify returns true if any of the user principals can access any of the
+// target entities.
+func (v Authz) Verify(txn permission.Transaction, principals []string, target []permission.ACE) (bool, error) {
 	if len(principals) == 0 {
 		return false, nil
 	}
@@ -24,7 +25,7 @@ func (v Guard) Verify(tx permission.Transaction, principals []string, target []p
 	}
 
 	// retrieve all stored principals that can access target
-	allowed, err := tx.GetAllACEPrincipals(target)
+	allowed, err := txn.GetAllACEPrincipals(target)
 	if err != nil {
 		return false, err
 	}
