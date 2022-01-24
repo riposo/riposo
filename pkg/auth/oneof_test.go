@@ -6,7 +6,7 @@ import (
 	"github.com/riposo/riposo/pkg/api"
 	"github.com/riposo/riposo/pkg/mock"
 
-	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/ginkgo/v2"
 	. "github.com/bsm/gomega"
 	. "github.com/riposo/riposo/pkg/auth"
 )

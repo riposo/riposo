@@ -6,7 +6,7 @@ require (
 	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.0.2
-	github.com/bsm/ginkgo v1.16.5
+	github.com/bsm/ginkgo/v2 v2.0.0
 	github.com/bsm/gomega v1.17.0
 	github.com/bsm/minisql v0.3.0
 	github.com/bsm/nanoid v0.2.0

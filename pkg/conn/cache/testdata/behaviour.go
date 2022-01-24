@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	Ψ "github.com/bsm/ginkgo"
+	Ψ "github.com/bsm/ginkgo/v2"
 	Ω "github.com/bsm/gomega"
 	"github.com/riposo/riposo/pkg/conn/cache"
 )

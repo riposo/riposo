@@ -6,7 +6,7 @@ import (
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/conn/permission/testdata"
 
-	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/ginkgo/v2"
 	. "github.com/bsm/gomega"
 	. "github.com/riposo/riposo/internal/conn/memory/permission"
 )
