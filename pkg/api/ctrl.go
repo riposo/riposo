@@ -29,7 +29,7 @@ func newRequest(req *http.Request) *request {
 
 type controller struct {
 	mod   Model
-	hooks *hookRegistry
+	hooks *hookChain
 	cfg   *Config
 }
 
@@ -437,7 +437,7 @@ func (c *controller) checkPermission(txn *Txn, path riposo.Path, perms ...string
 }
 
 func (c *controller) isForbidden(txn *Txn, ents *entSlice) error {
-	if ok, err := c.cfg.Guard.Verify(txn.Perms, txn.User.Principals, ents.S); err != nil {
+	if ok, err := c.cfg.Authz.Verify(txn.Perms, txn.User.Principals, ents.S); err != nil {
 		return err
 	} else if ok {
 		return nil
@@ -552,7 +552,7 @@ func (c *controller) parseBulkQuery(req *request, svs *schemaValueSlice) (*param
 		ents.Append("read", part)
 		ents.Append("write", part)
 	})
-	if ok, err := c.cfg.Guard.Verify(req.Txn.Perms, req.Txn.User.Principals, ents.S); err != nil {
+	if ok, err := c.cfg.Authz.Verify(req.Txn.Perms, req.Txn.User.Principals, ents.S); err != nil {
 		return nil, err
 	} else if ok {
 		return pms, nil

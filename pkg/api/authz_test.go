@@ -12,8 +12,8 @@ import (
 	. "github.com/riposo/riposo/pkg/api"
 )
 
-var _ = Describe("Guard", func() {
-	var subject Guard
+var _ = Describe("Authz", func() {
+	var subject Authz
 	var backend permission.Backend
 	var tx permission.Transaction
 	var ctx = context.Background()
@@ -24,7 +24,7 @@ var _ = Describe("Guard", func() {
 
 	BeforeEach(func() {
 		backend = memory.New()
-		subject = Guard{
+		subject = Authz{
 			"static:create": {"system.Authenticated"},
 		}
 

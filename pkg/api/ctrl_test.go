@@ -57,7 +57,7 @@ var _ = Describe("Routes.Resource", func() {
 		// init config
 		cfg := &Config{
 			// grant resource:create to team members
-			Guard: Guard{"resource:create": {"principal:team"}},
+			Authz: Authz{"resource:create": {"principal:team"}},
 		}
 		cfg.Pagination.MaxLimit = 3
 

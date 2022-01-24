@@ -32,8 +32,8 @@ func (u *User) IsAuthenticated() bool {
 
 // Config holds API configuration values.
 type Config struct {
-	// Guard is a custom authorization guard.
-	Guard Guard
+	// Authz is a custom authorization guard.
+	Authz Authz
 
 	// Pagination configures resource pagination options.
 	Pagination struct {
@@ -46,8 +46,8 @@ func (c *Config) norm() *Config {
 	if c == nil {
 		c = new(Config)
 	}
-	if c.Guard == nil {
-		c.Guard = make(Guard)
+	if c.Authz == nil {
+		c.Authz = make(Authz)
 	}
 	if c.Pagination.TokenValidity == 0 {
 		c.Pagination.TokenValidity = 10 * time.Minute

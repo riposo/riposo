@@ -62,18 +62,18 @@ func (NoopHook) AfterDeleteAll(_ *Txn, _ riposo.Path, _ []string, _ riposo.Epoch
 
 // --------------------------------------------------------------------
 
-// hookRegistry registers callbacks with patterns.
-type hookRegistry struct {
+// hookChain registers callbacks with patterns.
+type hookChain struct {
 	hooks []hook
 }
 
 // Len returns the number of registered hooks.
-func (r *hookRegistry) Len() int {
+func (r *hookChain) Len() int {
 	return len(r.hooks)
 }
 
 // Register registers callbacks with glob patterns.
-func (r *hookRegistry) Register(patterns []string, callbacks Hook) {
+func (r *hookChain) Register(patterns []string, callbacks Hook) {
 	globs := make([]hookGlob, 0, len(patterns))
 	for _, pat := range patterns {
 		glob := parseHookGlob(pat)
@@ -92,7 +92,7 @@ func (r *hookRegistry) Register(patterns []string, callbacks Hook) {
 }
 
 // ForEach iterates over registered callbacks for a given path.
-func (r *hookRegistry) ForEach(path riposo.Path, fn func(Hook) error) error {
+func (r *hookChain) ForEach(path riposo.Path, fn func(Hook) error) error {
 	s := path.String()
 	for _, h := range r.hooks {
 		if h.Match(s) {
