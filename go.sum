@@ -4,8 +4,8 @@ github.com/benbjohnson/clock v1.3.0 h1:ip6w0uFQkncKQ979AypyG0ER7mqUSBdKLOgAle/AT
 github.com/benbjohnson/clock v1.3.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/bmatcuk/doublestar/v4 v4.0.2 h1:X0krlUVAVmtr2cRoTqR8aDMrDqnB36ht8wpWTiQ3jsA=
 github.com/bmatcuk/doublestar/v4 v4.0.2/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
-github.com/bsm/ginkgo v1.16.5 h1:uTeeWv0Yx1PnDeCk76PFyGrOMVw3D+r9bTNKNcIjDdQ=
-github.com/bsm/ginkgo v1.16.5/go.mod h1:RabIZLzOCPghgHJKUqHZpqrQETA5AnF4aCSIYy5C1bk=
+github.com/bsm/ginkgo/v2 v2.0.0 h1:JZAs5u7SmJCrZlGFrC3v1stg/uC7OIj2q2FW9NxeIVE=
+github.com/bsm/ginkgo/v2 v2.0.0/go.mod h1:AiKlXPm7ItEHNc/2+OkrNG4E0ITzojb9/xWzvQ9XZ9w=
 github.com/bsm/gomega v1.17.0 h1:Sd6EsHO5d0DU6d41dtx9cK3T7Vjsr89o6zyIVWgi0CI=
 github.com/bsm/gomega v1.17.0/go.mod h1:JifAceMQ4crZIWYUKrlGcmbN3bqHogVTADMD2ATsbwk=
 github.com/bsm/minisql v0.3.0 h1:cAcqToSXLJkudv4EzsjXEOqstGmWfuBoZhfOnrvE71g=

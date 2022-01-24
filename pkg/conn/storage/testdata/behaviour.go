@@ -12,7 +12,7 @@ import (
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
 
-	Ψ "github.com/bsm/ginkgo"
+	Ψ "github.com/bsm/ginkgo/v2"
 	Ω "github.com/bsm/gomega"
 	"github.com/bsm/gomega/types"
 )

@@ -3,7 +3,7 @@ package riposo_test
 import (
 	"time"
 
-	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/ginkgo/v2"
 	. "github.com/bsm/gomega"
 	. "github.com/riposo/riposo/pkg/riposo"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	Ψ "github.com/bsm/ginkgo"
+	Ψ "github.com/bsm/ginkgo/v2"
 	Ω "github.com/bsm/gomega"
 	"github.com/bsm/gomega/types"
 	"github.com/riposo/riposo/pkg/conn/permission"

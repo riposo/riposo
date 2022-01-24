@@ -8,7 +8,7 @@ import (
 	"github.com/riposo/riposo/pkg/conn/cache"
 	"github.com/riposo/riposo/pkg/conn/cache/testdata"
 
-	. "github.com/bsm/ginkgo"
+	. "github.com/bsm/ginkgo/v2"
 	. "github.com/bsm/gomega"
 	. "github.com/riposo/riposo/internal/conn/postgres/cache"
 )
