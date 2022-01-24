@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -20,22 +21,25 @@ type Plugin interface {
 	// Commonly used keys are: "url" and "description".
 	Meta() map[string]interface{}
 
-	// Init callback is called on init.
-	Init(*api.Routes, riposo.Helpers) error
-
-	// Close callback is called on shutdown.
-	Close() error
+	api.Component
 }
+
+type (
+	// InitFunc initalises a plugin on boot.
+	InitFunc func(context.Context, *api.Routes, riposo.Helpers) error
+	// CloseFunc closes a plugin on shutdown.
+	CloseFunc func() error
+)
 
 type simple struct {
 	id    string
 	meta  map[string]interface{}
-	init  func(*api.Routes, riposo.Helpers) error
-	close func() error
+	init  InitFunc
+	close CloseFunc
 }
 
 // New inits a simple plugin.
-func New(id string, meta map[string]interface{}, init func(*api.Routes, riposo.Helpers) error, close func() error) Plugin {
+func New(id string, meta map[string]interface{}, init InitFunc, close CloseFunc) Plugin {
 	return &simple{
 		id:    id,
 		meta:  meta,
@@ -46,9 +50,9 @@ func New(id string, meta map[string]interface{}, init func(*api.Routes, riposo.H
 
 func (s *simple) ID() string                   { return s.id }
 func (s *simple) Meta() map[string]interface{} { return s.meta }
-func (s *simple) Init(rts *api.Routes, hlp riposo.Helpers) error {
+func (s *simple) Init(ctx context.Context, rts *api.Routes, hlp riposo.Helpers) error {
 	if s.init != nil {
-		return s.init(rts, hlp)
+		return s.init(ctx, rts, hlp)
 	}
 	return nil
 }
@@ -132,7 +136,7 @@ func EachMeta(iter func(id string, meta map[string]interface{})) {
 }
 
 // Init initializes registered plugins.
-func Init(rts *api.Routes, hlp riposo.Helpers, enabled []string) (*Set, error) {
+func Init(ctx context.Context, rts *api.Routes, hlp riposo.Helpers, enabled []string) (*Set, error) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
@@ -159,7 +163,7 @@ func Init(rts *api.Routes, hlp riposo.Helpers, enabled []string) (*Set, error) {
 		set.meta[id] = pin.Meta()
 
 		// init plugin
-		if err := pin.Init(rts, hlp); err != nil {
+		if err := pin.Init(ctx, rts, hlp); err != nil {
 			_ = set.Close()
 			return nil, err
 		}

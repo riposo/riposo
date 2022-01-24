@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -65,4 +66,11 @@ type HandlerFunc func(out http.Header, req *http.Request) interface{}
 func (f HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	res := f(w.Header(), r)
 	Render(w, res)
+}
+
+// Component represents a component that can be initialised on boot and closed
+// on shutdown.
+type Component interface {
+	Init(context.Context, *Routes, riposo.Helpers) error
+	Close() error
 }

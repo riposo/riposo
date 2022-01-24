@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -22,7 +23,7 @@ type Method interface {
 }
 
 // Factory initializes a Method at runtime.
-type Factory func(riposo.Helpers) (Method, error)
+type Factory func(context.Context, riposo.Helpers) (Method, error)
 
 // --------------------------------------------------------------------
 
