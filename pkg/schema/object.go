@@ -133,6 +133,22 @@ func (o *Object) UnmarshalJSON(p []byte) error {
 	return nil
 }
 
+// Copy creates a copy of the object.
+func (o *Object) Copy(copyExtra bool) *Object {
+	extra := o.Extra
+	if copyExtra {
+		extra = make([]byte, len(o.Extra))
+		copy(extra, o.Extra)
+	}
+
+	return &Object{
+		ID:      o.ID,
+		ModTime: o.ModTime,
+		Deleted: o.Deleted,
+		Extra:   extra,
+	}
+}
+
 // Update uses values of x to update o.
 func (o *Object) Update(x *Object) {
 	if x.ID != "" {
