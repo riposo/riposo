@@ -70,15 +70,10 @@ var _ = Describe("Object", func() {
 	})
 
 	It("copies objects", func() {
-		o2 := subject.Copy(true)
+		o2 := subject.Copy()
 		o2.Extra[2] = 'b'
 		Expect(o2.String()).To(MatchJSON(`{"id": "EPR.ID", "last_modified": 1567815678988, "beta": true, "nested": { "num": 33 }}`))
 		Expect(subject.String()).To(MatchJSON(`{"id": "EPR.ID", "last_modified": 1567815678988, "meta": true, "nested": { "num": 33 }}`))
-
-		o3 := subject.Copy(false)
-		o3.Extra[2] = 'z'
-		Expect(o3.String()).To(MatchJSON(`{"id": "EPR.ID", "last_modified": 1567815678988, "nested": { "num": 33 }, "zeta": true}`))
-		Expect(subject.String()).To(MatchJSON(`{"id": "EPR.ID", "last_modified": 1567815678988, "nested": { "num": 33 }, "zeta": true}`))
 	})
 
 	It("updates objects", func() {
