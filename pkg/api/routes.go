@@ -22,9 +22,9 @@ type Middleware func(http.Handler) http.Handler
 
 // Routes contains the main API route defintions.
 type Routes struct {
-	mux   *chi.Mux
-	hooks *hookChain
-	cfg   *Config
+	mux *chi.Mux
+	cbc *callbackChain
+	cfg *Config
 }
 
 // NewRoutes inits a new routes instance.
@@ -33,9 +33,9 @@ func NewRoutes(cfg *Config) *Routes {
 	mux.Use(middleware.WithValue(muxKey{}, mux))
 
 	return &Routes{
-		mux:   mux,
-		hooks: new(hookChain),
-		cfg:   cfg.norm(),
+		mux: mux,
+		cbc: new(callbackChain),
+		cfg: cfg.norm(),
 	}
 }
 
@@ -54,9 +54,9 @@ func (r *Routes) Handle(pattern string, handler http.Handler) {
 	r.mux.Handle(pattern, handler)
 }
 
-// Hook registers resource callbacks.
-func (r *Routes) Hook(globs []string, callbacks Hook) {
-	r.hooks.Register(globs, callbacks)
+// Callbacks registers resource callbacks.
+func (r *Routes) Callbacks(globs []string, callbacks Callbacks) {
+	r.cbc.Register(globs, callbacks)
 }
 
 // Resource registers a new resource under a prefix.
@@ -66,9 +66,9 @@ func (r *Routes) Resource(prefix string, model Model) {
 	}
 
 	c := &controller{
-		mod:   model,
-		hooks: r.hooks,
-		cfg:   r.cfg,
+		mod: model,
+		cbc: r.cbc,
+		cfg: r.cfg,
 	}
 
 	r.mux.Route(prefix, func(ns chi.Router) {

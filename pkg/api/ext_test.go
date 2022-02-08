@@ -2,12 +2,12 @@ package api
 
 import "github.com/riposo/riposo/pkg/riposo"
 
-type HookChain interface {
+type CallbackChain interface {
 	Len() int
-	Register(patterns []string, callbacks Hook)
-	ForEach(path riposo.Path, fn func(Hook) error) error
+	Register(patterns []string, callbacks Callbacks)
+	ForEach(path riposo.Path, fn func(Callbacks))
 }
 
-func NewHookChain() HookChain {
-	return new(hookChain)
+func NewCallbackChain() CallbackChain {
+	return new(callbackChain)
 }

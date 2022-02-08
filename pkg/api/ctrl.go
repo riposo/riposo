@@ -28,9 +28,9 @@ func newRequest(req *http.Request) *request {
 }
 
 type controller struct {
-	mod   Model
-	hooks *hookChain
-	cfg   *Config
+	mod Model
+	cbc *callbackChain
+	cfg *Config
 }
 
 func (c *controller) List(out http.Header, r *http.Request) interface{} {
@@ -135,11 +135,21 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		objIDs.S = append(objIDs.S, obj.ID)
 	}
 
-	// run before hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.BeforeDeleteAll(req.Txn, req.Path, objIDs.S)
-	}); err != nil {
-		return err
+	// prepare callbacks
+	callbacks := poolCallbacksSlice()
+	defer callbacks.Release()
+
+	c.cbc.ForEach(req.Path, func(cb Callbacks) {
+		if c := cb.OnDeleteAll(req.Txn, req.Path); c != nil {
+			callbacks.S = append(callbacks.S, c)
+		}
+	})
+
+	// run before callbacks
+	for _, c := range callbacks.S {
+		if err := c.(DeleteAllCallback).BeforeDeleteAll(objIDs.S); err != nil {
+			return err
+		}
 	}
 
 	// delete resources
@@ -154,11 +164,11 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		obj.ModTime = modTime
 	}
 
-	// run after hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterDeleteAll(req.Txn, req.Path, objIDs.S, modTime, deleted)
-	}); err != nil {
-		return err
+	// run after callbacks
+	for _, c := range callbacks.S {
+		if err := c.(DeleteAllCallback).AfterDeleteAll(modTime, deleted); err != nil {
+			return err
+		}
 	}
 
 	// set headers + respond
@@ -248,11 +258,21 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 		}
 	}
 
-	// run before hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.BeforeUpdate(req.Txn, req.Path, hs.Object(), &payload)
-	}); err != nil {
-		return err
+	// prepare callbacks
+	callbacks := poolCallbacksSlice()
+	defer callbacks.Release()
+
+	c.cbc.ForEach(req.Path, func(cb Callbacks) {
+		if c := cb.OnUpdate(req.Txn, req.Path); c != nil {
+			callbacks.S = append(callbacks.S, c)
+		}
+	})
+
+	// run before callbacks
+	for _, c := range callbacks.S {
+		if err := c.(UpdateCallback).BeforeUpdate(hs.Object(), &payload); err != nil {
+			return err
+		}
 	}
 
 	// update resource & permissions
@@ -269,11 +289,11 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
 
-	// run after hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterUpdate(req.Txn, req.Path, res)
-	}); err != nil {
-		return err
+	// run after callbacks
+	for _, c := range callbacks.S {
+		if err := c.(UpdateCallback).AfterUpdate(res); err != nil {
+			return err
+		}
 	}
 
 	// set headers + respond
@@ -334,11 +354,21 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// run before hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.BeforePatch(req.Txn, req.Path, hs.Object(), &payload)
-	}); err != nil {
-		return err
+	// prepare callbacks
+	callbacks := poolCallbacksSlice()
+	defer callbacks.Release()
+
+	c.cbc.ForEach(req.Path, func(cb Callbacks) {
+		if c := cb.OnPatch(req.Txn, req.Path); c != nil {
+			callbacks.S = append(callbacks.S, c)
+		}
+	})
+
+	// run before callbacks
+	for _, c := range callbacks.S {
+		if err := c.(PatchCallback).BeforePatch(hs.Object(), &payload); err != nil {
+			return err
+		}
 	}
 
 	// patch resource & permissions
@@ -355,11 +385,11 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
 
-	// run after hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterPatch(req.Txn, req.Path, res)
-	}); err != nil {
-		return err
+	// run after callbacks
+	for _, c := range callbacks.S {
+		if err := c.(PatchCallback).AfterPatch(res); err != nil {
+			return err
+		}
 	}
 
 	// set headers + respond
@@ -399,11 +429,21 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// run before hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.BeforeDelete(req.Txn, req.Path, exst)
-	}); err != nil {
-		return err
+	// prepare callbacks
+	callbacks := poolCallbacksSlice()
+	defer callbacks.Release()
+
+	c.cbc.ForEach(req.Path, func(cb Callbacks) {
+		if c := cb.OnDelete(req.Txn, req.Path); c != nil {
+			callbacks.S = append(callbacks.S, c)
+		}
+	})
+
+	// run before callbacks
+	for _, c := range callbacks.S {
+		if err := c.(DeleteCallback).BeforeDelete(exst); err != nil {
+			return err
+		}
 	}
 
 	// delete resource
@@ -412,11 +452,11 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// run after hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterDelete(req.Txn, req.Path, deleted)
-	}); err != nil {
-		return err
+	// run after callbacks
+	for _, c := range callbacks.S {
+		if err := c.(DeleteCallback).AfterDelete(deleted); err != nil {
+			return err
+		}
 	}
 
 	// set headers + respond
@@ -639,11 +679,21 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 		return err
 	}
 
-	// run before hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.BeforeCreate(req.Txn, req.Path, payload)
-	}); err != nil {
-		return err
+	// prepare callbacks
+	callbacks := poolCallbacksSlice()
+	defer callbacks.Release()
+
+	c.cbc.ForEach(req.Path, func(cb Callbacks) {
+		if c := cb.OnCreate(req.Txn, req.Path); c != nil {
+			callbacks.S = append(callbacks.S, c)
+		}
+	})
+
+	// run before callbacks
+	for _, c := range callbacks.S {
+		if err := c.(CreateCallback).BeforeCreate(payload); err != nil {
+			return err
+		}
 	}
 
 	// create resource, try 'get' if exists
@@ -655,11 +705,11 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 		return err
 	}
 
-	// run after hooks
-	if err := c.hooks.ForEach(req.Path, func(h Hook) error {
-		return h.AfterCreate(req.Txn, req.Path, payload)
-	}); err != nil {
-		return err
+	// run after callbacks
+	for _, c := range callbacks.S {
+		if err := c.(CreateCallback).AfterCreate(payload); err != nil {
+			return err
+		}
 	}
 
 	// set headers + respond
