@@ -88,3 +88,23 @@ func poolPathSlice() *pathSlice {
 
 func (s *pathSlice) Reset()   { s.S = s.S[:0] }
 func (s *pathSlice) Release() { pathSlicePool.Put(s) }
+
+// --------------------------------------------------------------------
+
+var callbacksSlicePool sync.Pool
+
+type callbacksSlice struct {
+	S []interface{}
+}
+
+func poolCallbacksSlice() *callbacksSlice {
+	if v := callbacksSlicePool.Get(); v != nil {
+		s := v.(*callbacksSlice)
+		s.Reset()
+		return s
+	}
+	return &callbacksSlice{}
+}
+
+func (s *callbacksSlice) Reset()   { s.S = s.S[:0] }
+func (s *callbacksSlice) Release() { callbacksSlicePool.Put(s) }

@@ -19,6 +19,7 @@ import (
 var _ = Describe("Routes.Resource", func() {
 	var subject *Routes
 	var txn *Txn
+	var callbacks *mockCallbacks
 
 	var (
 		alice  = mock.User("account:alice", "principal:team")
@@ -61,8 +62,12 @@ var _ = Describe("Routes.Resource", func() {
 		}
 		cfg.Pagination.MaxLimit = 3
 
+		// init callbacks
+		callbacks = new(mockCallbacks)
+
 		// setup routes and compile
 		subject = NewRoutes(cfg)
+		subject.Callbacks([]string{"**"}, callbacks)
 		subject.Resource("/resources", nil)
 		subject.Resource("/resources/{resourceID}/nested", nil)
 	})
@@ -157,6 +162,9 @@ var _ = Describe("Routes.Resource", func() {
 		const nextPageURL = "/resources?_limit=2&_sort=last_modified&_token=" + nextPageToken
 
 		BeforeEach(seedThree)
+		BeforeEach(func() {
+			callbacks.Reset()
+		})
 
 		It("authorizes", func() {
 			// bob has no access to resources
@@ -178,6 +186,7 @@ var _ = Describe("Routes.Resource", func() {
 				]
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeDeleteAll: 1, NumAfterDeleteAll: 1}))
 		})
 
 		It("paginates", func() {
@@ -397,6 +406,8 @@ var _ = Describe("Routes.Resource", func() {
 					"write": ["account:alice", "system.Everyone"]
 				}
 			}`))
+
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1, NumAfterCreate: 1}))
 		})
 
 		It("accepts custom IDs", func() {
@@ -445,6 +456,8 @@ var _ = Describe("Routes.Resource", func() {
 		It("returns existing unmodified", func() {
 			// seed resource: alpha
 			Expect(handle(http.MethodPost, "/resources", `{"data": {"id":"alpha"}}`).Code).To(Equal(http.StatusCreated))
+			callbacks.Reset()
+
 			Expect(handle(http.MethodPost, "/resources", `{
 				"data": {
 					"id": "alpha",
@@ -466,6 +479,8 @@ var _ = Describe("Routes.Resource", func() {
 					"write": ["account:alice"]
 				}
 			}`))
+
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1}))
 		})
 
 		It("does not fail on blank body", func() {
@@ -488,6 +503,7 @@ var _ = Describe("Routes.Resource", func() {
 				"data": {"id":"alpha", "meta":"data"},
 				"permissions": {"read":["account:bob"]}
 			}`).Code).To(Equal(http.StatusCreated))
+			callbacks.Reset()
 		})
 
 		It("authorizes", func() {
@@ -531,6 +547,8 @@ var _ = Describe("Routes.Resource", func() {
 					"write": ["account:alice", "system.Authenticated"]
 				}
 			}`))
+
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeUpdate: 1, NumAfterUpdate: 1}))
 		})
 
 		It("allows to leave permissions unchanged", func() {
@@ -579,6 +597,8 @@ var _ = Describe("Routes.Resource", func() {
 					"write": ["account:alice", "principal:team"]
 				}
 			}`))
+
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1, NumAfterCreate: 1}))
 		})
 
 		It("creates if not found (empty body)", func() {
@@ -663,6 +683,7 @@ var _ = Describe("Routes.Resource", func() {
 				"data": {"id":"alpha", "meta":"data"},
 				"permissions": {"read":["account:bob"]}
 			}`).Code).To(Equal(http.StatusCreated))
+			callbacks.Reset()
 		})
 
 		It("authorizes", func() {
@@ -703,6 +724,8 @@ var _ = Describe("Routes.Resource", func() {
 					"write": ["account:alice", "system.Everyone"]
 				}
 			}`))
+
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforePatch: 1, NumAfterPatch: 1}))
 		})
 
 		It("rejects inconsistent IDs", func() {
@@ -801,6 +824,7 @@ var _ = Describe("Routes.Resource", func() {
 		BeforeEach(func() {
 			// seed resource: alpha
 			Expect(handle(http.MethodPost, "/resources", `{"data": {"id":"alpha"}}`).Code).To(Equal(http.StatusCreated))
+			callbacks.Reset()
 		})
 
 		It("authorizes", func() {
@@ -833,6 +857,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
+			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeDelete: 1, NumAfterDelete: 1}))
 		})
 
 		It("handles not-found", func() {
