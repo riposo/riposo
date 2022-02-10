@@ -1,6 +1,10 @@
 package riposo
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+)
 
 // Path represents an object path.
 type Path string
@@ -101,6 +105,20 @@ func (p Path) Traverse(fn func(Path)) {
 // IsNode returns true if the path addresses multiple resources.
 func (p Path) IsNode() bool {
 	return strings.HasSuffix(string(p), "*")
+}
+
+// Match matches a wildcard pattern.
+func (p Path) Match(pat string) bool {
+	exclude := false
+	if strings.HasPrefix(pat, "!") {
+		exclude = true
+		pat = pat[1:]
+	}
+
+	if match, _ := doublestar.PathMatch(pat, string(p)); match {
+		return !exclude
+	}
+	return exclude
 }
 
 func (p Path) namespace() string {

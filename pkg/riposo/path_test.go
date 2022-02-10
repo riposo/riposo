@@ -86,6 +86,19 @@ var _ = Describe("Path", func() {
 			"",
 		}))
 	})
+
+	It("matches patterns", func() {
+		Expect(Path("").Match("/buckets")).To(BeFalse())
+		Expect(Path("").Match("!/buckets")).To(BeTrue())
+
+		full := Path("/buckets/foo/collections/bar/records/baz")
+		Expect(full.Match("/buckets/**")).To(BeTrue())
+		Expect(full.Match("/buckets/**/records/*")).To(BeTrue())
+		Expect(full.Match("/buckets/*/collections/*/records/baz")).To(BeTrue())
+		Expect(full.Match("!/other/**")).To(BeTrue())
+		Expect(full.Match("/buckets/**/records")).To(BeFalse())
+		Expect(full.Match("/buckets/*/group/*/records/baz")).To(BeFalse())
+	})
 })
 
 func BenchmarkPath_ResourceName(b *testing.B) {
