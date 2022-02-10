@@ -87,18 +87,33 @@ var _ = Describe("Path", func() {
 		}))
 	})
 
-	It("matches patterns", func() {
-		Expect(Path("").Match("/buckets")).To(BeFalse())
-		Expect(Path("").Match("!/buckets")).To(BeTrue())
+	It("matches single patterns", func() {
+		Expect(subject.Match("/buckets/**")).To(BeTrue())
+		Expect(subject.Match("/buckets/**/records/*")).To(BeTrue())
+		Expect(subject.Match("/buckets/*/collections/*/records/baz")).To(BeTrue())
+		Expect(subject.Match("!/other/**")).To(BeTrue())
 
-		full := Path("/buckets/foo/collections/bar/records/baz")
-		Expect(full.Match("/buckets/**")).To(BeTrue())
-		Expect(full.Match("/buckets/**/records/*")).To(BeTrue())
-		Expect(full.Match("/buckets/*/collections/*/records/baz")).To(BeTrue())
-		Expect(full.Match("!/other/**")).To(BeTrue())
-		Expect(full.Match("/buckets/**/records")).To(BeFalse())
-		Expect(full.Match("/buckets/*/group/*/records/baz")).To(BeFalse())
+		Expect(subject.Match("")).To(BeFalse())
+		Expect(subject.Match("/buckets/**/records")).To(BeFalse())
+		Expect(subject.Match("/buckets/*/group/*/records/baz")).To(BeFalse())
+		Expect(subject.Match("!/buckets/**")).To(BeFalse())
 	})
+
+	DescribeTable("matches multiple patterns",
+		func(path string, exp bool) {
+			Expect(Path(path).Match(
+				"/buckets/*/collections/mock/*/**",
+				"!**/secret",
+				"/buckets/**/collections/mock/q*/secret",
+			)).To(Equal(exp))
+		},
+		Entry("no match", "/buckets/foo", false),
+		Entry("no deep match", "/buckets/foo/collections/bar", false),
+		Entry("single * is not optional", "/buckets/foo/collections/mock", false),
+		Entry("suffix match", "/buckets/foo/collections/mock/records", true),
+		Entry("exclusions", "/buckets/foo/collections/mock/records/secret", false),
+		Entry("exclusion override", "/buckets/foo/collections/mock/quota/secret", true),
+	)
 })
 
 func BenchmarkPath_ResourceName(b *testing.B) {

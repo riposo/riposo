@@ -108,17 +108,31 @@ func (p Path) IsNode() bool {
 }
 
 // Match matches a wildcard pattern.
-func (p Path) Match(pat string) bool {
-	exclude := false
-	if strings.HasPrefix(pat, "!") {
-		exclude = true
-		pat = pat[1:]
-	}
+func (p Path) Match(patterns ...string) bool {
+	s := string(p)
+	match := false
 
-	if match, _ := doublestar.PathMatch(pat, string(p)); match {
-		return !exclude
+	for i, pat := range patterns {
+		inclusion := true
+		if strings.HasPrefix(pat, "!") {
+			inclusion = false
+			pat = pat[1:]
+		}
+
+		// skip if we already have a match and the pattern is an inclusion, or if
+		// we have no match and pattern is an exclusion.
+		if i != 0 && match == inclusion {
+			continue
+		}
+
+		// try match
+		if ok, _ := doublestar.PathMatch(pat, s); ok {
+			match = inclusion
+		} else {
+			match = !inclusion
+		}
 	}
-	return exclude
+	return match
 }
 
 func (p Path) namespace() string {
