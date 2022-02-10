@@ -23,7 +23,7 @@ type Middleware func(http.Handler) http.Handler
 // Routes contains the main API route defintions.
 type Routes struct {
 	mux *chi.Mux
-	cbc *callbackChain
+	cbs []Callbacks
 	cfg *Config
 }
 
@@ -34,7 +34,6 @@ func NewRoutes(cfg *Config) *Routes {
 
 	return &Routes{
 		mux: mux,
-		cbc: new(callbackChain),
 		cfg: cfg.norm(),
 	}
 }
@@ -55,8 +54,8 @@ func (r *Routes) Handle(pattern string, handler http.Handler) {
 }
 
 // Callbacks registers resource callbacks.
-func (r *Routes) Callbacks(globs []string, callbacks Callbacks) {
-	r.cbc.Register(globs, callbacks)
+func (r *Routes) Callbacks(callbacks Callbacks) {
+	r.cbs = append(r.cbs, callbacks)
 }
 
 // Resource registers a new resource under a prefix.
@@ -67,7 +66,7 @@ func (r *Routes) Resource(prefix string, model Model) {
 
 	c := &controller{
 		mod: model,
-		cbc: r.cbc,
+		cbs: r.cbs,
 		cfg: r.cfg,
 	}
 

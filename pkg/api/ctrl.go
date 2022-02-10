@@ -29,7 +29,7 @@ func newRequest(req *http.Request) *request {
 
 type controller struct {
 	mod Model
-	cbc *callbackChain
+	cbs []Callbacks
 	cfg *Config
 }
 
@@ -139,11 +139,13 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 	callbacks := poolCallbacksSlice()
 	defer callbacks.Release()
 
-	c.cbc.ForEach(req.Path, func(cb Callbacks) {
-		if c := cb.OnDeleteAll(req.Txn, req.Path); c != nil {
-			callbacks.S = append(callbacks.S, c)
+	for _, cb := range c.cbs {
+		if cb.Match(req.Path) {
+			if cm := cb.OnDeleteAll(req.Txn, req.Path); cm != nil {
+				callbacks.S = append(callbacks.S, cm)
+			}
 		}
-	})
+	}
 
 	// run before callbacks
 	for _, c := range callbacks.S {
@@ -262,11 +264,13 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	callbacks := poolCallbacksSlice()
 	defer callbacks.Release()
 
-	c.cbc.ForEach(req.Path, func(cb Callbacks) {
-		if c := cb.OnUpdate(req.Txn, req.Path); c != nil {
-			callbacks.S = append(callbacks.S, c)
+	for _, cb := range c.cbs {
+		if cb.Match(req.Path) {
+			if cm := cb.OnUpdate(req.Txn, req.Path); cm != nil {
+				callbacks.S = append(callbacks.S, cm)
+			}
 		}
-	})
+	}
 
 	// run before callbacks
 	for _, c := range callbacks.S {
@@ -358,11 +362,13 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	callbacks := poolCallbacksSlice()
 	defer callbacks.Release()
 
-	c.cbc.ForEach(req.Path, func(cb Callbacks) {
-		if c := cb.OnPatch(req.Txn, req.Path); c != nil {
-			callbacks.S = append(callbacks.S, c)
+	for _, cb := range c.cbs {
+		if cb.Match(req.Path) {
+			if cm := cb.OnPatch(req.Txn, req.Path); cm != nil {
+				callbacks.S = append(callbacks.S, cm)
+			}
 		}
-	})
+	}
 
 	// run before callbacks
 	for _, c := range callbacks.S {
@@ -433,11 +439,13 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	callbacks := poolCallbacksSlice()
 	defer callbacks.Release()
 
-	c.cbc.ForEach(req.Path, func(cb Callbacks) {
-		if c := cb.OnDelete(req.Txn, req.Path); c != nil {
-			callbacks.S = append(callbacks.S, c)
+	for _, cb := range c.cbs {
+		if cb.Match(req.Path) {
+			if cm := cb.OnDelete(req.Txn, req.Path); cm != nil {
+				callbacks.S = append(callbacks.S, cm)
+			}
 		}
-	})
+	}
 
 	// run before callbacks
 	for _, c := range callbacks.S {
@@ -683,11 +691,13 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 	callbacks := poolCallbacksSlice()
 	defer callbacks.Release()
 
-	c.cbc.ForEach(req.Path, func(cb Callbacks) {
-		if c := cb.OnCreate(req.Txn, req.Path); c != nil {
-			callbacks.S = append(callbacks.S, c)
+	for _, cb := range c.cbs {
+		if cb.Match(req.Path) {
+			if cm := cb.OnCreate(req.Txn, req.Path); cm != nil {
+				callbacks.S = append(callbacks.S, cm)
+			}
 		}
-	})
+	}
 
 	// run before callbacks
 	for _, c := range callbacks.S {

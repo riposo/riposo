@@ -10,6 +10,7 @@ import (
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/riposo"
+	"github.com/riposo/riposo/pkg/schema"
 
 	. "github.com/bsm/ginkgo/v2"
 	. "github.com/bsm/gomega"
@@ -67,7 +68,7 @@ var _ = Describe("Routes.Resource", func() {
 
 		// setup routes and compile
 		subject = NewRoutes(cfg)
-		subject.Callbacks([]string{"**"}, callbacks)
+		subject.Callbacks(callbacks)
 		subject.Resource("/resources", nil)
 		subject.Resource("/resources/{resourceID}/nested", nil)
 	})
@@ -186,7 +187,7 @@ var _ = Describe("Routes.Resource", func() {
 				]
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeDeleteAll: 1, NumAfterDeleteAll: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeDeleteAll", "AfterDeleteAll"}))
 		})
 
 		It("paginates", func() {
@@ -407,7 +408,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1, NumAfterCreate: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate", "AfterCreate"}))
 		})
 
 		It("accepts custom IDs", func() {
@@ -480,7 +481,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate"}))
 		})
 
 		It("does not fail on blank body", func() {
@@ -548,7 +549,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeUpdate: 1, NumAfterUpdate: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeUpdate", "AfterUpdate"}))
 		})
 
 		It("allows to leave permissions unchanged", func() {
@@ -598,7 +599,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeCreate: 1, NumAfterCreate: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate", "AfterCreate"}))
 		})
 
 		It("creates if not found (empty body)", func() {
@@ -725,7 +726,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforePatch: 1, NumAfterPatch: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforePatch", "AfterPatch"}))
 		})
 
 		It("rejects inconsistent IDs", func() {
@@ -857,7 +858,7 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
-			Expect(callbacks).To(Equal(&mockCallbacks{NumBeforeDelete: 1, NumAfterDelete: 1}))
+			Expect(callbacks.Calls).To(Equal([]string{"BeforeDelete", "AfterDelete"}))
 		})
 
 		It("handles not-found", func() {
@@ -1187,4 +1188,57 @@ func MatchResponse(code int, headers map[string]string, body string) types.Gomeg
 		WithTransform(func(w *httptest.ResponseRecorder) http.Header { return w.Header() }, ContainHeaders(headers)),
 		WithTransform(func(w *httptest.ResponseRecorder) []byte { return w.Body.Bytes() }, MatchBody(body)),
 	)
+}
+
+type mockCallbacks struct {
+	Calls []string
+}
+
+func (m *mockCallbacks) Reset()                                              { *m = mockCallbacks{} }
+func (m *mockCallbacks) Match(_ riposo.Path) bool                            { return true }
+func (m *mockCallbacks) OnCreate(_ *Txn, _ riposo.Path) CreateCallback       { return m }
+func (m *mockCallbacks) OnUpdate(_ *Txn, _ riposo.Path) UpdateCallback       { return m }
+func (m *mockCallbacks) OnPatch(_ *Txn, _ riposo.Path) PatchCallback         { return m }
+func (m *mockCallbacks) OnDelete(_ *Txn, _ riposo.Path) DeleteCallback       { return m }
+func (m *mockCallbacks) OnDeleteAll(_ *Txn, _ riposo.Path) DeleteAllCallback { return m }
+
+func (m *mockCallbacks) BeforeCreate(payload *schema.Resource) error {
+	m.Calls = append(m.Calls, "BeforeCreate")
+	return nil
+}
+func (m *mockCallbacks) AfterCreate(created *schema.Resource) error {
+	m.Calls = append(m.Calls, "AfterCreate")
+	return nil
+}
+func (m *mockCallbacks) BeforeUpdate(existing *schema.Object, payload *schema.Resource) error {
+	m.Calls = append(m.Calls, "BeforeUpdate")
+	return nil
+}
+func (m *mockCallbacks) AfterUpdate(updated *schema.Resource) error {
+	m.Calls = append(m.Calls, "AfterUpdate")
+	return nil
+}
+func (m *mockCallbacks) BeforePatch(existing *schema.Object, payload *schema.Resource) error {
+	m.Calls = append(m.Calls, "BeforePatch")
+	return nil
+}
+func (m *mockCallbacks) AfterPatch(patched *schema.Resource) error {
+	m.Calls = append(m.Calls, "AfterPatch")
+	return nil
+}
+func (m *mockCallbacks) BeforeDelete(existing *schema.Object) error {
+	m.Calls = append(m.Calls, "BeforeDelete")
+	return nil
+}
+func (m *mockCallbacks) AfterDelete(deleted *schema.Object) error {
+	m.Calls = append(m.Calls, "AfterDelete")
+	return nil
+}
+func (m *mockCallbacks) BeforeDeleteAll(objIDs []string) error {
+	m.Calls = append(m.Calls, "BeforeDeleteAll")
+	return nil
+}
+func (m *mockCallbacks) AfterDeleteAll(modTime riposo.Epoch, deleted []riposo.Path) error {
+	m.Calls = append(m.Calls, "AfterDeleteAll")
+	return nil
 }
