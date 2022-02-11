@@ -3,6 +3,8 @@ package schema
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/riposo/riposo/pkg/riposo"
@@ -41,6 +43,44 @@ func (o *Object) Get(field string) Value {
 	default:
 		return Value(gjson.GetBytes(o.Extra, field))
 	}
+}
+
+// Set sets a field value.
+func (o *Object) Set(field string, value interface{}) error {
+	switch field {
+	case "id":
+		switch val := value.(type) {
+		case string:
+			o.ID = val
+		default:
+			return fmt.Errorf("value is not a string")
+		}
+	case "last_modified":
+		switch val := value.(type) {
+		case int:
+			o.ModTime = riposo.Epoch(val)
+		case int64:
+			o.ModTime = riposo.Epoch(val)
+		case riposo.Epoch:
+			o.ModTime = val
+		default:
+			return fmt.Errorf("value is not a number")
+		}
+	case "deleted":
+		switch val := value.(type) {
+		case bool:
+			o.Deleted = val
+		default:
+			return fmt.Errorf("value is not a boolean")
+		}
+	default:
+		bin, err := sjson.SetBytes(o.Extra, field, value)
+		if err != nil {
+			return err
+		}
+		o.Extra = bin
+	}
+	return nil
 }
 
 // DecodeExtra unmarshals extra Extra into a value.
@@ -190,6 +230,24 @@ func (o *Object) String() string {
 	return string(bin)
 }
 
+// ByteSize returns the size of the JSON encoded object in bytes.
+func (o *Object) ByteSize() int64 {
+	if o == nil {
+		return 4
+	}
+
+	n := 2
+	n += 7 + len(o.ID)               // "id":""
+	n += 17 + sizeOfEpoch(o.ModTime) // ,"last_modified":
+	if o.Deleted {
+		n += 15 // ,"deleted":true
+	}
+	if m := len(o.Extra); m > 2 {
+		n += m - 1
+	}
+	return int64(n)
+}
+
 func recPatch(o1, o2 map[string]interface{}) {
 	for key, v2 := range o2 {
 		if v2 == nil {
@@ -214,4 +272,17 @@ func recPatch(o1, o2 map[string]interface{}) {
 			o1[key] = tv2
 		}
 	}
+}
+
+func sizeOfEpoch(e riposo.Epoch) int {
+	if e == 0 {
+		return 1
+	}
+
+	n := 1
+	if e < 0 {
+		e = -e
+		n++
+	}
+	return n + int(math.Log10(float64(e)))
 }

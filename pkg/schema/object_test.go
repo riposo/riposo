@@ -32,6 +32,26 @@ var _ = Describe("Object", func() {
 		Expect(subject.Get("nested.unknown")).To(Equal(Value{}))
 	})
 
+	It("sets values", func() {
+		Expect(subject.Set("id", 123)).To(MatchError(`value is not a string`))
+		Expect(subject.Set("last_modified", "foo")).To(MatchError(`value is not a number`))
+		Expect(subject.Set("deleted", "bar")).To(MatchError(`value is not a boolean`))
+
+		Expect(subject.Set("id", "foo")).To(Succeed())
+		Expect(subject.Set("last_modified", 1515151515_000)).To(Succeed())
+		Expect(subject.Set("deleted", true)).To(Succeed())
+		Expect(subject.Set("meta", "bar")).To(Succeed())
+		Expect(subject.Set("nested.num", 34)).To(Succeed())
+		Expect(subject.Set("other", true)).To(Succeed())
+
+		Expect(subject).To(Equal(&Object{
+			ID:      "foo",
+			ModTime: 1515151515_000,
+			Deleted: true,
+			Extra:   []byte(`{"meta": "bar", "nested": {"num": 34},"other":true}`),
+		}))
+	})
+
 	It("marshals to JSON", func() {
 		Expect(json.Marshal(subject)).To(MatchJSON(`{
 			"id": "EPR.ID",
@@ -130,4 +150,31 @@ var _ = Describe("Object", func() {
 		Expect(o1.Patch(o2)).To(Succeed())
 		Expect(o1.Extra).To(MatchJSON(`{"a": true}`))
 	})
+
+	DescribeTable("calculates size",
+		func(o *Object) {
+			bin, _ := json.Marshal(o)
+			Expect(o.ByteSize()).To(Equal(int64(len(bin))))
+		},
+		Entry("null", (*Object)(nil)),
+		Entry("blank", &Object{}),
+		Entry("only ID", &Object{ID: "EPR.ID"}),
+		Entry("no extra", &Object{ID: "EPR.ID", ModTime: 1567815678988}),
+		Entry("negative epoch", &Object{ID: "EPR.ID", ModTime: -101}),
+		Entry("blank extra", &Object{
+			ID:      "EPR.ID",
+			ModTime: 1567815678988,
+			Extra:   []byte(`{}`),
+		}),
+		Entry("full", &Object{
+			ID:      "EPR.ID",
+			ModTime: 1567815678988,
+			Extra:   []byte(`{"meta":true,"nested":{"num":33}}`),
+		}),
+		Entry("deleted", &Object{
+			ID:      "EPR.ID",
+			ModTime: 1567815678988,
+			Deleted: true,
+		}),
+	)
 })
