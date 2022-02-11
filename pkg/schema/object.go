@@ -3,7 +3,7 @@ package schema
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"math"
 	"strconv"
 
@@ -13,6 +13,12 @@ import (
 )
 
 var newLine = []byte("\n")
+
+var (
+	errValNotString = errors.New("value is not a string")
+	errValNotNumber = errors.New("value is not a number")
+	errValNotBool   = errors.New("value is not a boolean")
+)
 
 // Object is a stored object.
 type Object struct {
@@ -53,7 +59,7 @@ func (o *Object) Set(field string, value interface{}) error {
 		case string:
 			o.ID = val
 		default:
-			return fmt.Errorf("value is not a string")
+			return errValNotString
 		}
 	case "last_modified":
 		switch val := value.(type) {
@@ -64,14 +70,14 @@ func (o *Object) Set(field string, value interface{}) error {
 		case riposo.Epoch:
 			o.ModTime = val
 		default:
-			return fmt.Errorf("value is not a number")
+			return errValNotNumber
 		}
 	case "deleted":
 		switch val := value.(type) {
 		case bool:
 			o.Deleted = val
 		default:
-			return fmt.Errorf("value is not a boolean")
+			return errValNotBool
 		}
 	default:
 		bin, err := sjson.SetBytes(o.Extra, field, value)
