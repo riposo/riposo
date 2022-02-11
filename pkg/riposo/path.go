@@ -91,11 +91,11 @@ func (p Path) Contains(other Path) bool {
 	return p == other
 }
 
-// Traverse iterates over path and its parents.
-func (p Path) Traverse(fn func(Path)) {
+// Traverse iterates backwards over path and its parents. The iterator function
+// may return false to break the loop early.
+func (p Path) Traverse(iterator func(Path) bool) {
 	for {
-		fn(p)
-		if p == "" {
+		if !iterator(p) || p == "" {
 			break
 		}
 		p = p.Parent()
