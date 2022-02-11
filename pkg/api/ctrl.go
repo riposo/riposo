@@ -476,10 +476,11 @@ func (c *controller) checkPermission(txn *Txn, path riposo.Path, perms ...string
 	ents := poolEntSlice()
 	defer ents.Release()
 
-	path.Traverse(func(part riposo.Path) {
+	path.Traverse(func(part riposo.Path) bool {
 		for _, perm := range perms {
 			ents.Append(perm, part)
 		}
+		return true
 	})
 	return c.isForbidden(txn, ents)
 }
@@ -596,9 +597,10 @@ func (c *controller) parseBulkQuery(req *request, svs *schemaValueSlice) (*param
 	ents := poolEntSlice()
 	defer ents.Release()
 
-	req.Path.Parent().Traverse(func(part riposo.Path) {
+	req.Path.Parent().Traverse(func(part riposo.Path) bool {
 		ents.Append("read", part)
 		ents.Append("write", part)
+		return true
 	})
 	if ok, err := c.cfg.Authz.Verify(req.Txn.Perms, req.Txn.User.Principals, ents.S); err != nil {
 		return nil, err
@@ -675,8 +677,9 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 	defer ents.Release()
 
 	ents.Append(req.Path.ResourceName()+":create", parentPath)
-	parentPath.Traverse(func(part riposo.Path) {
+	parentPath.Traverse(func(part riposo.Path) bool {
 		ents.Append("write", part)
+		return true
 	})
 	if err := c.isForbidden(req.Txn, ents); err != nil {
 		return err

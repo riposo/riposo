@@ -76,14 +76,25 @@ var _ = Describe("Path", func() {
 
 	It("traverses", func() {
 		var seen []string
-		subject.Traverse(func(p Path) {
+		subject.Traverse(func(p Path) bool {
 			seen = append(seen, p.String())
+			return true
 		})
 		Expect(seen).To(Equal([]string{
 			"/buckets/foo/collections/bar/records/baz",
 			"/buckets/foo/collections/bar",
 			"/buckets/foo",
 			"",
+		}))
+
+		seen = seen[:0]
+		subject.Traverse(func(p Path) bool {
+			seen = append(seen, p.String())
+			return len(seen) < 2
+		})
+		Expect(seen).To(Equal([]string{
+			"/buckets/foo/collections/bar/records/baz",
+			"/buckets/foo/collections/bar",
 		}))
 	})
 
