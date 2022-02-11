@@ -12,13 +12,16 @@ type Path string
 // NormPath parses a path from a URL path.
 func NormPath(path string) Path {
 	path = trimPathPrefix(path)
+	if path == "" {
+		return ""
+	}
+
 	n := 0
 	for _, r := range path {
 		if r == '/' {
 			n++
 		}
 	}
-
 	if n%2 == 0 {
 		return Path(path)
 	}
@@ -26,8 +29,13 @@ func NormPath(path string) Path {
 }
 
 // JoinPath joins namespace and object ID.
-func JoinPath(namespace, objID string) Path {
-	return NormPath(namespace + "/" + objID)
+func JoinPath(parts ...string) Path {
+	for i, s := range parts {
+		if i != 0 {
+			parts[i] = strings.Trim(s, "/")
+		}
+	}
+	return NormPath(strings.Join(parts, "/"))
 }
 
 // Parent returns the parent path.

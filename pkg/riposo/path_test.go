@@ -23,7 +23,16 @@ var _ = Describe("Path", func() {
 
 		Expect(NormPath("/versions").String()).To(Equal("/versions/*"))
 		Expect(NormPath("/buckets").String()).To(Equal("/buckets/*"))
+		Expect(NormPath("/buckets/*").String()).To(Equal("/buckets/*"))
 		Expect(NormPath("/buckets/foo").String()).To(Equal("/buckets/foo"))
+		Expect(NormPath("/buckets/*/collections").String()).To(Equal("/buckets/*/collections/*"))
+	})
+
+	It("joins tokens", func() {
+		Expect(JoinPath().String()).To(Equal(""))
+		Expect(JoinPath("/buckets").String()).To(Equal("/buckets/*"))
+		Expect(JoinPath("/buckets", "foo").String()).To(Equal("/buckets/foo"))
+		Expect(JoinPath("/buckets", "foo", "/collections").String()).To(Equal("/buckets/foo/collections/*"))
 	})
 
 	It("calculates parent", func() {
@@ -108,6 +117,13 @@ var _ = Describe("Path", func() {
 		Expect(subject.Match("/buckets/**/records")).To(BeFalse())
 		Expect(subject.Match("/buckets/*/group/*/records/baz")).To(BeFalse())
 		Expect(subject.Match("!/buckets/**")).To(BeFalse())
+
+		node := Path("/buckets/foo/collections/*")
+		Expect(node.Match("")).To(BeFalse())
+		Expect(node.Match("/buckets/**")).To(BeTrue())
+		Expect(node.Match("/buckets/*/collections/*")).To(BeTrue())
+		Expect(node.Match("/buckets/*/collections/**")).To(BeTrue())
+		Expect(node.Match("/buckets/*/collections/specific")).To(BeFalse())
 	})
 
 	DescribeTable("matches multiple patterns",
