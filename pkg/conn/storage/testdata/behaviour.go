@@ -3,6 +3,7 @@ package testdata
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -24,6 +25,7 @@ type testableTx interface {
 // LikeBackend test link.
 type LikeBackend struct {
 	storage.Backend
+	SkipACID    bool
 	SkipFilters []params.Operator
 }
 
@@ -451,6 +453,25 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(NumEntries()).To(Ω.Equal(0))
 	})
 
+	Ψ.Describe("transactions", func() {
+		Ψ.BeforeEach(func() {
+			if link.SkipACID {
+				Ψ.Skip("ACID transaction are not supported")
+			}
+		})
+
+		Ψ.It("can rollback", func() {
+			Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
+			Ω.Expect(NumEntries()).To(Ω.Equal(1))
+			Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+
+			var err error
+			tx, err = subject.Begin(ctx)
+			Ω.Expect(err).NotTo(Ω.HaveOccurred())
+			Ω.Expect(NumEntries()).To(Ω.Equal(0))
+		})
+	})
+
 	Ψ.Describe("listing", func() {
 		var o1, o2 *schema.Object
 
@@ -564,13 +585,13 @@ func BehavesLikeBackend(link *LikeBackend) {
 			succeed := func() types.GomegaMatcher {
 				return Ω.SatisfyAny(Ω.BeEmpty(), Ω.HaveLen(1), Ω.HaveLen(2))
 			}
-			conditionalSupport := func(op params.Operator) func(types.GomegaMatcher) types.GomegaMatcher {
-				for _, skip := range link.SkipFilters {
-					if op == skip {
-						return func(_ types.GomegaMatcher) types.GomegaMatcher { return Ω.BeEmpty() }
+			skipFilter := func(op params.Operator) bool {
+				for _, f := range link.SkipFilters {
+					if op == f {
+						return true
 					}
 				}
-				return func(m types.GomegaMatcher) types.GomegaMatcher { return m }
+				return false
 			}
 
 			Ψ.It("filters via EQ", func() {
@@ -876,193 +897,201 @@ func BehavesLikeBackend(link *LikeBackend) {
 			})
 
 			Ψ.It("filters via IN", func() {
-				ifSupported := conditionalSupport(params.OperatorIN)
+				if op := params.OperatorIN; skipFilter(op) {
+					Ψ.Skip(fmt.Sprintf("operator %q is not supported", op))
+				}
 
 				// ID
-				Ω.Expect(filter("in_id", "EPR.ID,ITR.ID")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("in_id", "X,EPR.ID,Z")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("in_id", "X,Y,Z")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_id", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("in_id", "EPR.ID,ITR.ID")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("in_id", "X,EPR.ID,Z")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("in_id", "X,Y,Z")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_id", "")).To(Ω.BeEmpty())
 
 				// Last-Modified
-				Ω.Expect(filter("in_last_modified", etoa(o1.ModTime))).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("in_last_modified", etoa(o2.ModTime))).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("in_last_modified", "1,2,3")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_last_modified", "a,b,c")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_last_modified", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("in_last_modified", etoa(o1.ModTime))).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("in_last_modified", etoa(o2.ModTime))).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("in_last_modified", "1,2,3")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_last_modified", "a,b,c")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_last_modified", "")).To(Ω.BeEmpty())
 
 				// Strings
-				Ω.Expect(filter("in_str", "k,l,m")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("in_str", "x,y,z")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_str", "null")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("in_str", "true")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_str", "1,2,3")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_str", "k,null,m")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("in_str", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("in_str", "k,l,m")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("in_str", "x,y,z")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_str", "null")).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("in_str", "true")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_str", "1,2,3")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_str", "k,null,m")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("in_str", "")).To(Ω.BeEmpty())
 
 				// Numerics
-				Ω.Expect(filter("in_num", "33")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("in_num", "11,33,66")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("in_num", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_num", "true")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_num", "x,y,z")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("in_num", "33")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("in_num", "11,33,66")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("in_num", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_num", "true")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_num", "x,y,z")).To(Ω.BeEmpty())
 
 				// Booleans
-				Ω.Expect(filter("in_yes", "x,true,3")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("in_yes", "x,false,3")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_non", "x,true,3")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_non", "x,false,3")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
+				Ω.Expect(filter("in_yes", "x,true,3")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("in_yes", "x,false,3")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_non", "x,true,3")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_non", "x,false,3")).To(Ω.ConsistOf("EPR.ID"))
 
 				// Arrays
-				Ω.Expect(filter("in_ary", "null")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
+				Ω.Expect(filter("in_ary", "null")).To(Ω.ConsistOf("ITR.ID"))
 
 				// Objects
-				Ω.Expect(filter("in_sub", "null")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("in_sub", "null")).To(Ω.BeEmpty())
 
 				// Missing
-				Ω.Expect(filter("in_unk", "x,y,z")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("in_unk", "x,null,z")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("in_unk", "x,y,z")).To(Ω.BeEmpty())
+				Ω.Expect(filter("in_unk", "x,null,z")).To(Ω.HaveLen(2))
 			})
 
 			Ψ.It("filters via EXCLUDE", func() {
-				ifSupported := conditionalSupport(params.OperatorEXCLUDE)
+				if op := params.OperatorEXCLUDE; skipFilter(op) {
+					Ψ.Skip(fmt.Sprintf("operator %q is not supported", op))
+				}
 
 				// ID
-				Ω.Expect(filter("exclude_id", "EPR.ID,ITR.ID")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("exclude_id", "X,EPR.ID,Z")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("exclude_id", "X,Y,Z")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_id", "")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("exclude_id", "EPR.ID,ITR.ID")).To(Ω.BeEmpty())
+				Ω.Expect(filter("exclude_id", "X,EPR.ID,Z")).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("exclude_id", "X,Y,Z")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_id", "")).To(Ω.HaveLen(2))
 
 				// Last-Modified
-				Ω.Expect(filter("exclude_last_modified", etoa(o1.ModTime))).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("exclude_last_modified", etoa(o2.ModTime))).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("exclude_last_modified", "1,2,3")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_last_modified", "a,b,c")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_last_modified", "")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("exclude_last_modified", etoa(o1.ModTime))).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("exclude_last_modified", etoa(o2.ModTime))).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("exclude_last_modified", "1,2,3")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_last_modified", "a,b,c")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_last_modified", "")).To(Ω.HaveLen(2))
 
 				// Strings
-				Ω.Expect(filter("exclude_str", "k,l,m")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("exclude_str", "x,y,z")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_str", "null")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("exclude_str", "true")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_str", "1,2,3")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_str", "k,null,m")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("exclude_str", "")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("exclude_str", "k,l,m")).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("exclude_str", "x,y,z")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_str", "null")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("exclude_str", "true")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_str", "1,2,3")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_str", "k,null,m")).To(Ω.BeEmpty())
+				Ω.Expect(filter("exclude_str", "")).To(Ω.HaveLen(2))
 
 				// Numerics
-				Ω.Expect(filter("exclude_num", "33")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("exclude_num", "11,33,66")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("exclude_num", "null")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_num", "true")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_num", "x,y,z")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("exclude_num", "33")).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("exclude_num", "11,33,66")).To(Ω.BeEmpty())
+				Ω.Expect(filter("exclude_num", "null")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_num", "true")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_num", "x,y,z")).To(Ω.HaveLen(2))
 
 				// Booleans
-				Ω.Expect(filter("exclude_yes", "x,true,3")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
-				Ω.Expect(filter("exclude_yes", "x,false,3")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_non", "x,true,3")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_non", "x,false,3")).To(ifSupported(Ω.ConsistOf("ITR.ID")))
+				Ω.Expect(filter("exclude_yes", "x,true,3")).To(Ω.ConsistOf("ITR.ID"))
+				Ω.Expect(filter("exclude_yes", "x,false,3")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_non", "x,true,3")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_non", "x,false,3")).To(Ω.ConsistOf("ITR.ID"))
 
 				// Arrays
-				Ω.Expect(filter("exclude_ary", "null")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
+				Ω.Expect(filter("exclude_ary", "null")).To(Ω.ConsistOf("EPR.ID"))
 
 				// Objects
-				Ω.Expect(filter("exclude_sub", "null")).To(ifSupported(Ω.HaveLen(2)))
+				Ω.Expect(filter("exclude_sub", "null")).To(Ω.HaveLen(2))
 
 				// Missing
-				Ω.Expect(filter("exclude_unk", "x,y,z")).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("exclude_unk", "x,null,z")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("exclude_unk", "x,y,z")).To(Ω.HaveLen(2))
+				Ω.Expect(filter("exclude_unk", "x,null,z")).To(Ω.BeEmpty())
 			})
 
 			Ψ.It("filters via CONTAINS", func() {
-				ifSupported := conditionalSupport(params.OperatorContains)
+				if op := params.OperatorContains; skipFilter(op) {
+					Ψ.Skip(fmt.Sprintf("operator %q is not supported", op))
+				}
 
 				// ID - always false
-				Ω.Expect(filter("contains_id", "EPR.ID")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_id", "ROC")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_id", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_id", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_id", "EPR.ID")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_id", "ROC")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_id", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_id", "")).To(Ω.BeEmpty())
 
 				// Last-Modified - always false
-				Ω.Expect(filter("contains_last_modified", etoa(o1.ModTime))).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_last_modified", "0")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_last_modified", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_last_modified", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_last_modified", etoa(o1.ModTime))).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_last_modified", "0")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_last_modified", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_last_modified", "")).To(Ω.BeEmpty())
 
 				// Strings
-				Ω.Expect(filter("contains_str", `k`)).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_str", `123`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_str", `null`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_str", `true`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_str", `"xx"`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_str", ``)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_str", `k`)).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_str", `123`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_str", `null`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_str", `true`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_str", `"xx"`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_str", ``)).To(Ω.BeEmpty())
 
 				// Numerics
-				Ω.Expect(filter("contains_num", "33")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_num", "99")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_num", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_num", "true")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_num", `"xx"`)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_num", "33")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_num", "99")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_num", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_num", "true")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_num", `"xx"`)).To(Ω.BeEmpty())
 
 				// Booleans
-				Ω.Expect(filter("contains_yes", "true")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_yes", "false")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_yes", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_non", "true")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_non", "false")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_non", "null")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_yes", "true")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_yes", "false")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_yes", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_non", "true")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_non", "false")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_non", "null")).To(Ω.BeEmpty())
 
 				// Arrays
-				Ω.Expect(filter("contains_ary", "x")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
+				Ω.Expect(filter("contains_ary", "x")).To(Ω.ConsistOf("EPR.ID"))
 
 				// Objects
-				Ω.Expect(filter("contains_sub", `{"ok": true}`)).To(ifSupported(Ω.HaveLen(2)))
-				Ω.Expect(filter("contains_sub", `{"num": 11}`)).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_sub", `{"num": 12}`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_sub", `{"unk": true}`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_sub", `11`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_sub", `true`)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_sub", `{"ok": true}`)).To(Ω.HaveLen(2))
+				Ω.Expect(filter("contains_sub", `{"num": 11}`)).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_sub", `{"num": 12}`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_sub", `{"unk": true}`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_sub", `11`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_sub", `true`)).To(Ω.BeEmpty())
 
 				// Missing - always false
-				Ω.Expect(filter("contains_unk", "xx")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_unk", "null")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_unk", "xx")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_unk", "null")).To(Ω.BeEmpty())
 			})
 
 			Ψ.It("filters via CONTAINS_ANY", func() {
-				ifSupported := conditionalSupport(params.OperatorContainsAny)
+				if op := params.OperatorContainsAny; skipFilter(op) {
+					Ψ.Skip(fmt.Sprintf("operator %q is not supported", op))
+				}
 
 				// ID - always false
-				Ω.Expect(filter("contains_any_id", "EPR.ID")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_id", "EPR.ID,ITR.ID")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_id", "null")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_id", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_id", "EPR.ID")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_id", "EPR.ID,ITR.ID")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_id", "null")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_id", "")).To(Ω.BeEmpty())
 
 				// Last-Modified - always false
-				Ω.Expect(filter("contains_any_last_modified", etoa(o1.ModTime))).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_last_modified", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_last_modified", etoa(o1.ModTime))).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_last_modified", "")).To(Ω.BeEmpty())
 
 				// Strings - always false
-				Ω.Expect(filter("contains_any_str", `k`)).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_str", "")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_str", `k`)).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_str", "")).To(Ω.BeEmpty())
 
 				// Numerics - always false
-				Ω.Expect(filter("contains_any_num", `33`)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_num", `33`)).To(Ω.BeEmpty())
 
 				// Arrays
-				Ω.Expect(filter("contains_any_ary", "x")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", "x,y,z")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", "5,6,7")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", "w,false")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", `{"z":8}`)).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", "null")).To(ifSupported(Ω.ConsistOf("EPR.ID")))
-				Ω.Expect(filter("contains_any_ary", "8,9")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_ary", "u,v,w")).To(ifSupported(Ω.BeEmpty()))
-				Ω.Expect(filter("contains_any_ary", "true")).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_ary", "x")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", "x,y,z")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", "5,6,7")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", "w,false")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", `{"z":8}`)).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", "null")).To(Ω.ConsistOf("EPR.ID"))
+				Ω.Expect(filter("contains_any_ary", "8,9")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_ary", "u,v,w")).To(Ω.BeEmpty())
+				Ω.Expect(filter("contains_any_ary", "true")).To(Ω.BeEmpty())
 
 				// Objects - always false
-				Ω.Expect(filter("contains_any_sub", `{"ok": true}`)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_sub", `{"ok": true}`)).To(Ω.BeEmpty())
 
 				// Missing - always false
-				Ω.Expect(filter("contains_any_unk", `xx`)).To(ifSupported(Ω.BeEmpty()))
+				Ω.Expect(filter("contains_any_unk", `xx`)).To(Ω.BeEmpty())
 			})
 		})
 	})

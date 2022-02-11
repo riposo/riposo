@@ -187,7 +187,10 @@ var _ = Describe("Routes.Resource", func() {
 				]
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeDeleteAll", "AfterDeleteAll"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/*"},
+				Calls: []string{"BeforeDeleteAll", "AfterDeleteAll"},
+			}))
 		})
 
 		It("paginates", func() {
@@ -408,7 +411,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate", "AfterCreate"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/*"},
+				Calls: []string{"BeforeCreate", "AfterCreate"},
+			}))
 		})
 
 		It("accepts custom IDs", func() {
@@ -481,7 +487,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/*"},
+				Calls: []string{"BeforeCreate"},
+			}))
 		})
 
 		It("does not fail on blank body", func() {
@@ -549,7 +558,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeUpdate", "AfterUpdate"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/alpha"},
+				Calls: []string{"BeforeUpdate", "AfterUpdate"},
+			}))
 		})
 
 		It("allows to leave permissions unchanged", func() {
@@ -599,7 +611,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeCreate", "AfterCreate"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/*"},
+				Calls: []string{"BeforeCreate", "AfterCreate"},
+			}))
 		})
 
 		It("creates if not found (empty body)", func() {
@@ -726,7 +741,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 
-			Expect(callbacks.Calls).To(Equal([]string{"BeforePatch", "AfterPatch"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/alpha"},
+				Calls: []string{"BeforePatch", "AfterPatch"},
+			}))
 		})
 
 		It("rejects inconsistent IDs", func() {
@@ -858,7 +876,10 @@ var _ = Describe("Routes.Resource", func() {
 				}
 			}`))
 			Expect(handle(http.MethodGet, "/resources/alpha", ``).Code).To(Equal(http.StatusForbidden))
-			Expect(callbacks.Calls).To(Equal([]string{"BeforeDelete", "AfterDelete"}))
+			Expect(callbacks).To(Equal(&mockCallbacks{
+				Paths: []string{"/resources/alpha"},
+				Calls: []string{"BeforeDelete", "AfterDelete"},
+			}))
 		})
 
 		It("handles not-found", func() {
@@ -1191,16 +1212,32 @@ func MatchResponse(code int, headers map[string]string, body string) types.Gomeg
 }
 
 type mockCallbacks struct {
+	Paths []string
 	Calls []string
 }
 
-func (m *mockCallbacks) Reset()                                              { *m = mockCallbacks{} }
-func (m *mockCallbacks) Match(_ riposo.Path) bool                            { return true }
-func (m *mockCallbacks) OnCreate(_ *Txn, _ riposo.Path) CreateCallback       { return m }
-func (m *mockCallbacks) OnUpdate(_ *Txn, _ riposo.Path) UpdateCallback       { return m }
-func (m *mockCallbacks) OnPatch(_ *Txn, _ riposo.Path) PatchCallback         { return m }
-func (m *mockCallbacks) OnDelete(_ *Txn, _ riposo.Path) DeleteCallback       { return m }
-func (m *mockCallbacks) OnDeleteAll(_ *Txn, _ riposo.Path) DeleteAllCallback { return m }
+func (m *mockCallbacks) Reset()                   { *m = mockCallbacks{} }
+func (m *mockCallbacks) Match(_ riposo.Path) bool { return true }
+func (m *mockCallbacks) OnCreate(_ *Txn, path riposo.Path) CreateCallback {
+	m.Paths = append(m.Paths, string(path))
+	return m
+}
+func (m *mockCallbacks) OnUpdate(_ *Txn, path riposo.Path) UpdateCallback {
+	m.Paths = append(m.Paths, string(path))
+	return m
+}
+func (m *mockCallbacks) OnPatch(_ *Txn, path riposo.Path) PatchCallback {
+	m.Paths = append(m.Paths, string(path))
+	return m
+}
+func (m *mockCallbacks) OnDelete(_ *Txn, path riposo.Path) DeleteCallback {
+	m.Paths = append(m.Paths, string(path))
+	return m
+}
+func (m *mockCallbacks) OnDeleteAll(_ *Txn, path riposo.Path) DeleteAllCallback {
+	m.Paths = append(m.Paths, string(path))
+	return m
+}
 
 func (m *mockCallbacks) BeforeCreate(payload *schema.Resource) error {
 	m.Calls = append(m.Calls, "BeforeCreate")
