@@ -28,8 +28,7 @@ func newRequest(req *http.Request) *request {
 }
 
 type controller struct {
-	mod Model
-	cbs []Callbacks
+	act Actions
 	cfg *Config
 }
 
@@ -135,27 +134,8 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		objIDs.S = append(objIDs.S, obj.ID)
 	}
 
-	// prepare callbacks
-	callbacks := poolCallbacksSlice()
-	defer callbacks.Release()
-
-	for _, cb := range c.cbs {
-		if cb.Match(req.Path) {
-			if cm := cb.OnDeleteAll(req.Txn, req.Path); cm != nil {
-				callbacks.S = append(callbacks.S, cm)
-			}
-		}
-	}
-
-	// run before callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteAllCallback).BeforeDeleteAll(objIDs.S); err != nil {
-			return err
-		}
-	}
-
-	// delete resources
-	modTime, deleted, err := c.mod.DeleteAll(req.Txn, req.Path, objIDs.S)
+	// perform action
+	modTime, err := c.act.DeleteAll(req.Txn, req.Path, objIDs.S)
 	if err != nil {
 		return err
 	}
@@ -164,13 +144,6 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 	for _, obj := range objs {
 		obj.Deleted = true
 		obj.ModTime = modTime
-	}
-
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteAllCallback).AfterDeleteAll(modTime, deleted); err != nil {
-			return err
-		}
 	}
 
 	// set headers + respond
@@ -260,44 +233,10 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 		}
 	}
 
-	// prepare callbacks
-	callbacks := poolCallbacksSlice()
-	defer callbacks.Release()
-
-	for _, cb := range c.cbs {
-		if cb.Match(req.Path) {
-			if cm := cb.OnUpdate(req.Txn, req.Path); cm != nil {
-				callbacks.S = append(callbacks.S, cm)
-			}
-		}
-	}
-
-	// run before callbacks
-	for _, c := range callbacks.S {
-		if err := c.(UpdateCallback).BeforeUpdate(hs.Object(), &payload); err != nil {
-			return err
-		}
-	}
-
 	// update resource & permissions
-	if err := c.mod.Update(req.Txn, req.Path, hs, &payload); err != nil {
-		return err
-	}
-
-	// fetch updated permissions
-	ps, err := req.Txn.Perms.GetPermissions(req.Path)
+	res, err := c.act.Update(req.Txn, req.Path, hs, &payload)
 	if err != nil {
 		return err
-	}
-
-	// prepare response
-	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
-
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(UpdateCallback).AfterUpdate(res); err != nil {
-			return err
-		}
 	}
 
 	// set headers + respond
@@ -358,44 +297,10 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// prepare callbacks
-	callbacks := poolCallbacksSlice()
-	defer callbacks.Release()
-
-	for _, cb := range c.cbs {
-		if cb.Match(req.Path) {
-			if cm := cb.OnPatch(req.Txn, req.Path); cm != nil {
-				callbacks.S = append(callbacks.S, cm)
-			}
-		}
-	}
-
-	// run before callbacks
-	for _, c := range callbacks.S {
-		if err := c.(PatchCallback).BeforePatch(hs.Object(), &payload); err != nil {
-			return err
-		}
-	}
-
 	// patch resource & permissions
-	if err := c.mod.Patch(req.Txn, req.Path, hs, &payload); err != nil {
-		return err
-	}
-
-	// fetch updated permissions
-	ps, err := req.Txn.Perms.GetPermissions(req.Path)
+	res, err := c.act.Patch(req.Txn, req.Path, hs, &payload)
 	if err != nil {
 		return err
-	}
-
-	// prepare response
-	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
-
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(PatchCallback).AfterPatch(res); err != nil {
-			return err
-		}
 	}
 
 	// set headers + respond
@@ -435,36 +340,10 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// prepare callbacks
-	callbacks := poolCallbacksSlice()
-	defer callbacks.Release()
-
-	for _, cb := range c.cbs {
-		if cb.Match(req.Path) {
-			if cm := cb.OnDelete(req.Txn, req.Path); cm != nil {
-				callbacks.S = append(callbacks.S, cm)
-			}
-		}
-	}
-
-	// run before callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteCallback).BeforeDelete(exst); err != nil {
-			return err
-		}
-	}
-
 	// delete resource
-	deleted, err := c.mod.Delete(req.Txn, req.Path, exst)
+	deleted, err := c.act.Delete(req.Txn, req.Path, exst)
 	if err != nil {
 		return err
-	}
-
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteCallback).AfterDelete(deleted); err != nil {
-			return err
-		}
 	}
 
 	// set headers + respond
@@ -654,7 +533,7 @@ func (c *controller) doGet(out http.Header, req *request) interface{} {
 	}
 
 	// get resource
-	exst, err := c.mod.Get(req.Txn, req.Path)
+	exst, err := c.act.Get(req.Txn, req.Path)
 	if err == storage.ErrNotFound {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
@@ -690,39 +569,13 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 		return err
 	}
 
-	// prepare callbacks
-	callbacks := poolCallbacksSlice()
-	defer callbacks.Release()
-
-	for _, cb := range c.cbs {
-		if cb.Match(req.Path) {
-			if cm := cb.OnCreate(req.Txn, req.Path); cm != nil {
-				callbacks.S = append(callbacks.S, cm)
-			}
-		}
-	}
-
-	// run before callbacks
-	for _, c := range callbacks.S {
-		if err := c.(CreateCallback).BeforeCreate(payload); err != nil {
-			return err
-		}
-	}
-
 	// create resource, try 'get' if exists
-	err := c.mod.Create(req.Txn, req.Path, payload)
+	err := c.act.Create(req.Txn, req.Path, payload)
 	if err == storage.ErrObjectExists && payload.Data.ID != "" {
 		req.Path = req.Path.WithObjectID(payload.Data.ID)
 		return c.doGet(out, req)
 	} else if err != nil {
 		return err
-	}
-
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(CreateCallback).AfterCreate(payload); err != nil {
-			return err
-		}
 	}
 
 	// set headers + respond

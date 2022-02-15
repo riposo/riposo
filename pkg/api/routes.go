@@ -65,8 +65,7 @@ func (r *Routes) Resource(prefix string, model Model) {
 	}
 
 	c := &controller{
-		mod: model,
-		cbs: r.cbs,
+		act: NewActions(model, r.cbs),
 		cfg: r.cfg,
 	}
 
