@@ -157,10 +157,20 @@ type transaction struct {
 	ctx context.Context
 }
 
+// Commit implements storage.Transaction interface.
+func (tx *transaction) Commit() error {
+	return normErr(tx.Tx.Commit())
+}
+
+// Rollback implements storage.Transaction interface.
+func (tx *transaction) Rollback() error {
+	return normErr(tx.Tx.Rollback())
+}
+
 // Flush implements storage.Transaction interface.
 func (tx *transaction) Flush() error {
 	_, err := tx.ExecContext(tx.ctx, `TRUNCATE storage_objects, storage_timestamps`)
-	return err
+	return normErr(err)
 }
 
 // ModTime implements storage.Transaction interface.
@@ -176,7 +186,7 @@ func (tx *transaction) ModTime(path riposo.Path) (riposo.Epoch, error) {
 		StmtContext(tx.ctx, tx.cn.stmt.getModTime).
 		QueryRowContext(tx.ctx, ns).
 		Scan(&modTime); err != nil && err != sql.ErrNoRows {
-		return 0, err
+		return 0, normErr(err)
 	}
 	return modTime, nil
 }
@@ -197,7 +207,7 @@ func (tx *transaction) Exists(path riposo.Path) (bool, error) {
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
-	return ok, err
+	return ok, normErr(err)
 }
 
 // Get implements storage.Transaction interface.
@@ -213,10 +223,8 @@ func (tx *transaction) Get(path riposo.Path) (*schema.Object, error) {
 		StmtContext(tx.ctx, tx.cn.stmt.getObject).
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&obj.ModTime, &obj.Extra)
-	if err == sql.ErrNoRows {
-		return nil, storage.ErrNotFound
-	} else if err != nil {
-		return nil, err
+	if err != nil {
+		return nil, normErr(err)
 	}
 
 	obj.ID = path.ObjectID()
@@ -236,10 +244,8 @@ func (tx *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, err
 		StmtContext(tx.ctx, tx.cn.stmt.getObjectForUpdate).
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&obj.ModTime, &obj.Extra)
-	if err == sql.ErrNoRows {
-		return nil, storage.ErrNotFound
-	} else if err != nil {
-		return nil, err
+	if err != nil {
+		return nil, normErr(err)
 	}
 
 	obj.ID = path.ObjectID()
@@ -272,7 +278,7 @@ func (tx *transaction) Create(path riposo.Path, obj *schema.Object) error {
 		StmtContext(tx.ctx, tx.cn.stmt.createObject).
 		QueryRowContext(tx.ctx, ns, obj.ID, obj.Extra).
 		Scan(&modTime); err != nil {
-		return err
+		return normErr(err)
 	}
 
 	obj.ModTime = modTime
@@ -293,7 +299,7 @@ func (tx *transaction) Update(h storage.UpdateHandle) error {
 		StmtContext(tx.ctx, tx.cn.stmt.updateObject).
 		QueryRowContext(tx.ctx, ns, objID, uh.obj.Extra).
 		Scan(&modTime); err != nil {
-		return err
+		return normErr(err)
 	}
 
 	uh.obj.ModTime = modTime
@@ -314,16 +320,14 @@ func (tx *transaction) Delete(path riposo.Path) (*schema.Object, error) {
 	if err := tx.
 		StmtContext(tx.ctx, tx.cn.stmt.deleteObject).
 		QueryRowContext(tx.ctx, ns, objID).
-		Scan(&obj.ModTime, &obj.Extra); err == sql.ErrNoRows {
-		return nil, storage.ErrNotFound
-	} else if err != nil {
-		return nil, err
+		Scan(&obj.ModTime, &obj.Extra); err != nil {
+		return nil, normErr(err)
 	}
 
 	if _, err := tx.
 		StmtContext(tx.ctx, tx.cn.stmt.deleteObjectNested).
 		ExecContext(tx.ctx, string(path)+"/%"); err != nil {
-		return nil, err
+		return nil, normErr(err)
 	}
 
 	return &obj, nil
@@ -349,7 +353,7 @@ func (tx *transaction) CountAll(path riposo.Path, opt storage.CountOptions) (int
 	err := stmt.
 		QueryRowContext(tx.ctx, tx).
 		Scan(&cnt)
-	return cnt, err
+	return cnt, normErr(err)
 }
 
 // ListAll implements storage.Transaction interface.
@@ -373,7 +377,7 @@ func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stor
 
 	rows, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
-		return objs, err
+		return objs, normErr(err)
 	}
 	defer rows.Close()
 
@@ -423,7 +427,7 @@ func (tx *transaction) DeleteAll(paths []riposo.Path) (riposo.Epoch, []riposo.Pa
 	deleted := make([]riposo.Path, 0, len(paths))
 	rows1, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, normErr(err)
 	}
 	defer rows1.Close()
 
@@ -460,7 +464,7 @@ func (tx *transaction) DeleteAll(paths []riposo.Path) (riposo.Epoch, []riposo.Pa
 	// delete nested
 	rows2, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, normErr(err)
 	}
 	defer rows2.Close()
 
@@ -485,7 +489,17 @@ func (tx *transaction) Purge(olderThan riposo.Epoch) (int64, error) {
 		StmtContext(tx.ctx, tx.cn.stmt.purgeObjects).
 		ExecContext(tx.ctx, olderThan.IsZero(), olderThan)
 	if err != nil {
-		return 0, err
+		return 0, normErr(err)
 	}
 	return res.RowsAffected()
+}
+
+func normErr(err error) error {
+	switch err {
+	case sql.ErrTxDone:
+		return storage.ErrTxDone
+	case sql.ErrNoRows:
+		return storage.ErrNotFound
+	}
+	return err
 }

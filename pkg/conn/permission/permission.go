@@ -4,6 +4,7 @@ package permission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -11,6 +12,9 @@ import (
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
 )
+
+// ErrTxDone is returned when a transaction has expired.
+var ErrTxDone = errors.New("transaction has already been committed or rolled back")
 
 // ACE is a permission/path tuple.
 type ACE struct {
@@ -30,11 +34,12 @@ type Backend interface {
 	Close() error
 }
 
-// Transaction is a transaction.
+// Transaction is a transaction. Please note that transactions are not
+// guaranteed to be thread-safe and must not be used across multiple goroutines.
 type Transaction interface {
 	// Commit commits the transaction.
 	Commit() error
-	// Rollback aborts the transaction.
+	// Rollback rolls back the transaction.
 	Rollback() error
 
 	// Flush deletes all stored data.

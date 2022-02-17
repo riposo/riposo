@@ -40,8 +40,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 	})
 
 	Ψ.AfterEach(func() {
-		Ω.Expect(tx.Flush()).To(Ω.Succeed())
-		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+		Ω.Expect(tx.Rollback()).To(Ω.Or(Ω.Succeed(), Ω.MatchError(permission.ErrTxDone)))
 	})
 
 	Ψ.It("connects and migrates", func() {
@@ -51,6 +50,44 @@ func BehavesLikeBackend(link *LikeBackend) {
 
 	Ψ.It("pings", func() {
 		Ω.Expect(subject.Ping(ctx)).To(Ω.Succeed())
+	})
+
+	Ψ.It("is single-use", func() {
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+		Ω.Expect(tx.Rollback()).To(Ω.MatchError(permission.ErrTxDone))
+		Ω.Expect(tx.Commit()).To(Ω.MatchError(permission.ErrTxDone))
+		Ω.Expect(tx.Flush()).To(Ω.MatchError(permission.ErrTxDone))
+	})
+
+	Ψ.It("is transactional", func() {
+		Ω.Expect(tx.AddUserPrincipal("foo", []string{"alice"})).To(Ω.Succeed())
+		Ω.Expect(tx.AddUserPrincipal("bar", []string{"alice"})).To(Ω.Succeed())
+		Ω.Expect(tx.AddUserPrincipal("baz", []string{"alice"})).To(Ω.Succeed())
+		Ω.Expect(tx.RemoveUserPrincipal("bar", []string{"alice"})).To(Ω.Succeed())
+		Ω.Expect(tx.CreatePermissions("/buckets/bat", schema.PermissionSet{
+			"read":  []string{"x"},
+			"write": []string{"y", "z"},
+		})).To(Ω.Succeed())
+		Ω.Expect(tx.AddACEPrincipal("y", ACE("read", "/buckets/bat"))).To(Ω.Succeed())
+		Ω.Expect(tx.RemoveACEPrincipal("y", ACE("write", "/buckets/bat"))).To(Ω.Succeed())
+
+		Ω.Expect(tx.GetUserPrincipals("alice")).To(Ω.ConsistOf(
+			"alice", "system.Authenticated", "system.Everyone",
+			"foo", "baz",
+		))
+		Ω.Expect(tx.GetPermissions("/buckets/bat")).To(Ω.And(
+			Ω.HaveLen(2),
+			Ω.HaveKeyWithValue("read", []string{"x", "y"}),
+			Ω.HaveKeyWithValue("write", []string{"z"}),
+		))
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+
+		tx2, err := subject.Begin(ctx)
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		defer tx2.Rollback()
+
+		Ω.Expect(tx2.GetUserPrincipals("alice")).To(Ω.ConsistOf("alice", "system.Authenticated", "system.Everyone"))
+		Ω.Expect(tx2.GetPermissions("/buckets/bat")).To(Ω.BeEmpty())
 	})
 
 	Ψ.It("flushes", func() {

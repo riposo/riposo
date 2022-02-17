@@ -25,7 +25,7 @@ func (it *item) Expired(now time.Time) bool { return it.exp.Before(now) }
 
 type backend struct {
 	keys map[string]*item
-	mu   sync.RWMutex
+	mu   sync.Mutex
 
 	closer chan struct{}
 }
@@ -47,7 +47,8 @@ func (*backend) Ping(_ context.Context) error {
 
 // Begin implements cache.Backend interface.
 func (b *backend) Begin(_ context.Context) (cache.Transaction, error) {
-	return b, nil
+	b.mu.Lock()
+	return &transaction{b: b}, nil
 }
 
 // Close implements cache.Backend interface.
@@ -63,27 +64,96 @@ func (b *backend) Close() error {
 	return nil
 }
 
-// Commit implements cache.Transaction interface.
-func (*backend) Commit() error { return nil }
+func (b *backend) loop() {
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
 
-// Rollback implements cache.Transaction interface.
-func (*backend) Rollback() error { return nil }
+	for {
+		select {
+		case <-b.closer:
+			return
+		case now := <-t.C:
+			b.reapExpired(now)
+		}
+	}
+}
 
-// Flush implements cache.Transaction interface.
-func (b *backend) Flush() error {
+func (b *backend) reapExpired(now time.Time) {
 	b.mu.Lock()
-	b.keys = make(map[string]*item)
-	b.mu.Unlock()
+	defer b.mu.Unlock()
+
+	for key, it := range b.keys {
+		if it.Expired(now) {
+			delete(b.keys, key)
+		}
+	}
+}
+
+// --------------------------------------------------------------------
+
+type transaction struct {
+	b *backend
+
+	xkeys map[string]*item
+
+	done, flushed bool
+}
+
+// Commit implements cache.Transaction interface.
+func (t *transaction) Commit() error {
+	if t.done {
+		return cache.ErrTxDone
+	}
+	t.done = true
+	defer t.b.mu.Unlock()
 
 	return nil
 }
 
-// Get implements cache.Transaction interface.
-func (b *backend) Get(key string) ([]byte, error) {
-	b.mu.RLock()
-	it, ok := b.keys[key]
-	b.mu.RUnlock()
+// Rollback implements cache.Transaction interface.
+func (t *transaction) Rollback() error {
+	if t.done {
+		return cache.ErrTxDone
+	}
+	t.done = true
+	defer t.b.mu.Unlock()
 
+	if t.flushed {
+		t.b.keys = t.xkeys
+		return nil
+	}
+
+	for key, it := range t.xkeys {
+		if it == nil {
+			delete(t.b.keys, key)
+		} else {
+			t.b.keys[key] = it
+		}
+	}
+	return nil
+}
+
+// Flush implements cache.Transaction interface.
+func (t *transaction) Flush() error {
+	if t.done {
+		return cache.ErrTxDone
+	}
+
+	if !t.flushed {
+		t.flushed = true
+		t.xkeys = t.b.keys
+	}
+	t.b.keys = make(map[string]*item)
+	return nil
+}
+
+// Get implements cache.Transaction interface.
+func (t *transaction) Get(key string) ([]byte, error) {
+	if t.done {
+		return nil, cache.ErrTxDone
+	}
+
+	it, ok := t.b.keys[key]
 	if !ok || it.Expired(time.Now()) {
 		return nil, cache.ErrNotFound
 	}
@@ -94,18 +164,21 @@ func (b *backend) Get(key string) ([]byte, error) {
 }
 
 // Set implements cache.Transaction interface.
-func (b *backend) Set(key string, val []byte, exp time.Time) error {
+func (t *transaction) Set(key string, val []byte, exp time.Time) error {
 	if err := cache.ValidateKey(key); err != nil {
 		return err
 	}
 
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	if t.done {
+		return cache.ErrTxDone
+	}
 
-	it, ok := b.keys[key]
+	t.backup(key)
+
+	it, ok := t.b.keys[key]
 	if !ok {
 		it = new(item)
-		b.keys[key] = it
+		t.b.keys[key] = it
 	}
 
 	it.exp = exp
@@ -115,13 +188,16 @@ func (b *backend) Set(key string, val []byte, exp time.Time) error {
 }
 
 // Del implements cache.Transaction interface.
-func (b *backend) Del(key string) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (t *transaction) Del(key string) error {
+	if t.done {
+		return cache.ErrTxDone
+	}
 
-	it, ok := b.keys[key]
+	t.backup(key)
+
+	it, ok := t.b.keys[key]
 	if ok {
-		delete(b.keys, key)
+		delete(t.b.keys, key)
 	}
 
 	if !ok || it.Expired(time.Now()) {
@@ -130,35 +206,16 @@ func (b *backend) Del(key string) error {
 	return nil
 }
 
-func (b *backend) loop() {
-	t := time.NewTicker(time.Minute)
-	defer t.Stop()
-
-	var acc []string
-	for {
-		select {
-		case <-b.closer:
-			return
-		case now := <-t.C:
-			b.reapExpired(now, acc[:0])
-		}
+func (t *transaction) backup(key string) {
+	if t.flushed {
+		return
 	}
-}
 
-func (b *backend) reapExpired(now time.Time, acc []string) {
-	b.mu.RLock()
-	for key, it := range b.keys {
-		if it.Expired(now) {
-			acc = append(acc, key)
-		}
+	if t.xkeys == nil {
+		t.xkeys = make(map[string]*item)
 	}
-	b.mu.RUnlock()
 
-	for _, key := range acc {
-		b.mu.Lock()
-		if it, ok := b.keys[key]; ok && it.Expired(now) {
-			delete(b.keys, key)
-		}
-		b.mu.Unlock()
+	if _, ok := t.xkeys[key]; !ok {
+		t.xkeys[key] = t.b.keys[key]
 	}
 }

@@ -24,7 +24,9 @@ var _ = Describe("Backend", func() {
 		Expect(subject.Close()).To(Succeed())
 	})
 
-	testdata.BehavesLikeBackend(&link)
+	Describe("common", func() {
+		testdata.BehavesLikeBackend(&link)
+	})
 })
 
 func TestSuite(t *testing.T) {

@@ -22,7 +22,7 @@ var _ = Describe("OneOf", func() {
 
 	AfterEach(func() {
 		Expect(subject.Close()).To(Succeed())
-		Expect(txn.Abort()).To(Succeed())
+		Expect(txn.Rollback()).To(Succeed())
 	})
 
 	It("authenticates", func() {

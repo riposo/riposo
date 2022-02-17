@@ -18,6 +18,9 @@ var (
 	// ErrNotFound is returned when an key is not found.
 	ErrNotFound = errors.New("key not found")
 
+	// ErrTxDone is returned when a transaction has expired.
+	ErrTxDone = errors.New("transaction has already been committed or rolled back")
+
 	// errInvalidKey is returned when an key is invalid.
 	errInvalidKey = errors.New("key is invalid")
 )
@@ -34,11 +37,12 @@ type Backend interface {
 	Close() error
 }
 
-// Transaction is a transaction.
+// Transaction is a transaction. Please note that transactions are not
+// guaranteed to be thread-safe and must not be used across multiple goroutines.
 type Transaction interface {
 	// Commit commits the transaction.
 	Commit() error
-	// Rollback aborts the transaction.
+	// Rollback rolls back the transaction.
 	Rollback() error
 
 	// Flush deletes all stored data.

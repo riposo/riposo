@@ -31,7 +31,7 @@ type backend struct {
 	hlp  riposo.Helpers
 	tree objectTree
 	dead objectTree
-	mu   sync.RWMutex
+	mu   sync.Mutex
 }
 
 // New inits a new in-memory store. Please use for development and testing only!
@@ -60,254 +60,8 @@ func (*backend) Close() error {
 
 // Begin implements Backend interface.
 func (b *backend) Begin(_ context.Context) (storage.Transaction, error) {
-	return b, nil
-}
-
-// Commit implements Transaction interface.
-func (b *backend) Commit() error {
-	return nil
-}
-
-// Rollback implements Transaction interface.
-func (b *backend) Rollback() error {
-	return nil
-}
-
-// Flush implements Transaction interface.
-func (b *backend) Flush() error {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	b.tree = make(objectTree)
-	b.dead = make(objectTree)
-	return nil
-}
-
-// ModTime implements Transaction interface.
-func (b *backend) ModTime(path riposo.Path) (riposo.Epoch, error) {
-	if !path.IsNode() {
-		return 0, storage.ErrInvalidPath
-	}
-
-	ns, _ := path.Split()
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	if node := b.tree.GetNode(ns); node != nil {
-		return node.modTime, nil
-	}
-	return 0, nil
-}
-
-// Exists implements Transaction interface.
-func (b *backend) Exists(path riposo.Path) (bool, error) {
-	if path.IsNode() {
-		return false, storage.ErrInvalidPath
-	}
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	obj := b.tree.Get(path.Split())
-	return obj != nil, nil
-}
-
-// Get implements Transaction interface.
-func (b *backend) Get(path riposo.Path) (*schema.Object, error) {
-	if path.IsNode() {
-		return nil, storage.ErrInvalidPath
-	}
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	obj := b.tree.Get(path.Split())
-	if obj == nil {
-		return nil, storage.ErrNotFound
-	}
-	return copyObject(obj), nil
-}
-
-// GetForUpdate implements Transaction interface.
-func (b *backend) GetForUpdate(path riposo.Path) (storage.UpdateHandle, error) {
-	obj, err := b.Get(path)
-	if err != nil {
-		return nil, err
-	}
-	return &updateHandle{obj: obj, path: path}, nil
-}
-
-// Create implements Transaction interface.
-func (b *backend) Create(path riposo.Path, obj *schema.Object) error {
-	if !path.IsNode() {
-		return storage.ErrInvalidPath
-	}
-
-	now := riposo.EpochFromTime(b.cc.Now())
-	ns, _ := path.Split()
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if obj.ID != "" {
-		if exst := b.tree.Get(ns, obj.ID); exst != nil {
-			return storage.ErrObjectExists
-		}
-	} else {
-		obj.ID = b.hlp.NextID()
-	}
-
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
-
-	b.dead.Unlink(ns, obj.ID)
-	b.tree.FetchNode(ns, 0).Put(obj, now)
-	return nil
-}
-
-// Update implements Transaction interface.
-func (b *backend) Update(h storage.UpdateHandle) error {
-	uh := h.(*updateHandle)
-	now := riposo.EpochFromTime(b.cc.Now())
-	ns, _ := uh.path.Split()
-
-	if len(uh.obj.Extra) == 0 {
-		uh.obj.Extra = append(uh.obj.Extra, '{', '}')
-	}
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	b.dead.Unlink(ns, uh.obj.ID)
-	b.tree.FetchNode(ns, 0).Put(uh.obj, now)
-	return nil
-}
-
-// Delete implements Transaction interface.
-func (b *backend) Delete(path riposo.Path) (*schema.Object, error) {
-	if path.IsNode() {
-		return nil, storage.ErrInvalidPath
-	}
-
-	now := riposo.EpochFromTime(b.cc.Now())
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	var deleted *schema.Object
-	b.delete(path, now, true, func(_ string, obj *schema.Object, exact bool) {
-		if exact {
-			deleted = obj
-		}
-	})
-	if deleted == nil {
-		return nil, storage.ErrNotFound
-	}
-	return deleted, nil
-}
-
-// ListAll implements Transaction interface.
-func (b *backend) ListAll(objs []*schema.Object, path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
-	if !path.IsNode() {
-		return nil, storage.ErrInvalidPath
-	}
-
-	ns, _ := path.Split()
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	b.tree.Each(ns, opt.Condition, func(obj *schema.Object) {
-		objs = append(objs, obj)
-	})
-
-	if opt.Include == storage.IncludeAll {
-		b.dead.Each(ns, opt.Condition, func(obj *schema.Object) {
-			objs = append(objs, obj)
-		})
-	}
-
-	objs = paginationFilter(objs, opt.Pagination)
-	if len(opt.Sort) != 0 {
-		sort.Sort(&objectSlice{Slice: objs, Sort: opt.Sort})
-	}
-	if opt.Limit > 0 && len(objs) > opt.Limit {
-		objs = objs[:opt.Limit]
-	}
-	return objs, nil
-}
-
-// CountAll implements Transaction interface.
-func (b *backend) CountAll(path riposo.Path, opt storage.CountOptions) (int64, error) {
-	if !path.IsNode() {
-		return 0, storage.ErrInvalidPath
-	}
-
-	ns, _ := path.Split()
-	cnt := int64(0)
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	b.tree.Each(ns, opt.Condition, func(obj *schema.Object) {
-		cnt++
-	})
-	return cnt, nil
-}
-
-// DeleteAll implements Transaction interface.
-func (b *backend) DeleteAll(paths []riposo.Path) (modTime riposo.Epoch, deleted []riposo.Path, _ error) {
-	for _, path := range paths {
-		if path.IsNode() {
-			return 0, nil, storage.ErrInvalidPath
-		}
-	}
-
-	if len(paths) == 0 {
-		return 0, nil, nil
-	}
-
-	now := riposo.EpochFromTime(b.cc.Now())
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	for _, path := range paths {
-		b.delete(path, now, false, func(ns string, obj *schema.Object, exact bool) {
-			if exact && obj.ModTime > modTime {
-				modTime = obj.ModTime
-			}
-			deleted = append(deleted, riposo.JoinPath(ns, obj.ID))
-		})
-	}
-	return
-}
-
-// Purge implements Transaction interface.
-func (b *backend) Purge(olderThan riposo.Epoch) (cnt int64, err error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if olderThan == 0 {
-		cnt = int64(b.dead.Len())
-		b.dead = make(objectTree)
-		return
-	}
-
-	for ns, node := range b.dead {
-		for oid, obj := range node.objects {
-			if obj.ModTime < olderThan {
-				delete(node.objects, oid)
-				cnt++
-			}
-		}
-		if len(node.objects) == 0 {
-			delete(b.dead, ns)
-		}
-	}
-	return
+	return &transaction{b: b}, nil
 }
 
 func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool, cb func(string, *schema.Object, bool)) {
@@ -337,6 +91,323 @@ func (b *backend) delete(path riposo.Path, epoch riposo.Epoch, requireExact bool
 					b.dead.FetchNode(nns, 0).ForcePut(obj)
 				}
 			}
+		}
+	}
+}
+
+// --------------------------------------------------------------------
+
+type transaction struct {
+	b *backend
+
+	xtree objectTree
+	xdead objectTree
+
+	done, flushed bool
+}
+
+// Commit implements Transaction interface.
+func (t *transaction) Commit() error {
+	if t.done {
+		return storage.ErrTxDone
+	}
+	t.done = true
+	defer t.b.mu.Unlock()
+
+	return nil
+}
+
+// Rollback implements Transaction interface.
+func (t *transaction) Rollback() error {
+	if t.done {
+		return storage.ErrTxDone
+	}
+	t.done = true
+	defer t.b.mu.Unlock()
+
+	if t.flushed {
+		t.b.tree = t.xtree
+		t.b.dead = t.xdead
+		return nil
+	}
+
+	t.restore(t.b.tree, t.xtree)
+	t.restore(t.b.dead, t.xdead)
+	return nil
+}
+
+// Flush implements Transaction interface.
+func (t *transaction) Flush() error {
+	if t.done {
+		return storage.ErrTxDone
+	}
+
+	if !t.flushed {
+		t.flushed = true
+		t.xtree = t.b.tree
+		t.xdead = t.b.dead
+	}
+
+	t.b.tree = make(objectTree)
+	t.b.dead = make(objectTree)
+	return nil
+}
+
+// ModTime implements Transaction interface.
+func (t *transaction) ModTime(path riposo.Path) (riposo.Epoch, error) {
+	if !path.IsNode() {
+		return 0, storage.ErrInvalidPath
+	}
+	if t.done {
+		return 0, storage.ErrTxDone
+	}
+
+	ns, _ := path.Split()
+	if node := t.b.tree.GetNode(ns); node != nil {
+		return node.modTime, nil
+	}
+	return 0, nil
+}
+
+// Exists implements Transaction interface.
+func (t *transaction) Exists(path riposo.Path) (bool, error) {
+	if path.IsNode() {
+		return false, storage.ErrInvalidPath
+	}
+	if t.done {
+		return false, storage.ErrTxDone
+	}
+
+	obj := t.b.tree.Get(path.Split())
+	return obj != nil, nil
+}
+
+// Get implements Transaction interface.
+func (t *transaction) Get(path riposo.Path) (*schema.Object, error) {
+	if path.IsNode() {
+		return nil, storage.ErrInvalidPath
+	}
+	if t.done {
+		return nil, storage.ErrTxDone
+	}
+
+	obj := t.b.tree.Get(path.Split())
+	if obj == nil {
+		return nil, storage.ErrNotFound
+	}
+	return copyObject(obj), nil
+}
+
+// GetForUpdate implements Transaction interface.
+func (t *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, error) {
+	obj, err := t.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	return &updateHandle{obj: obj, path: path}, nil
+}
+
+// Create implements Transaction interface.
+func (t *transaction) Create(path riposo.Path, obj *schema.Object) error {
+	if !path.IsNode() {
+		return storage.ErrInvalidPath
+	}
+	if t.done {
+		return storage.ErrTxDone
+	}
+
+	now := riposo.EpochFromTime(t.b.cc.Now())
+	ns, _ := path.Split()
+	t.backup(ns)
+
+	if obj.ID != "" {
+		if exst := t.b.tree.Get(ns, obj.ID); exst != nil {
+			return storage.ErrObjectExists
+		}
+	} else {
+		obj.ID = t.b.hlp.NextID()
+	}
+
+	if len(obj.Extra) == 0 {
+		obj.Extra = append(obj.Extra, '{', '}')
+	}
+
+	t.b.dead.Unlink(ns, obj.ID)
+	t.b.tree.FetchNode(ns, 0).Put(obj, now)
+	return nil
+}
+
+// Update implements Transaction interface.
+func (t *transaction) Update(h storage.UpdateHandle) error {
+	if t.done {
+		return storage.ErrTxDone
+	}
+
+	uh := h.(*updateHandle)
+	now := riposo.EpochFromTime(t.b.cc.Now())
+	ns, _ := uh.path.Split()
+	t.backup(ns)
+
+	if len(uh.obj.Extra) == 0 {
+		uh.obj.Extra = append(uh.obj.Extra, '{', '}')
+	}
+
+	t.b.dead.Unlink(ns, uh.obj.ID)
+	t.b.tree.FetchNode(ns, 0).Put(uh.obj, now)
+	return nil
+}
+
+// Delete implements Transaction interface.
+func (t *transaction) Delete(path riposo.Path) (*schema.Object, error) {
+	if path.IsNode() {
+		return nil, storage.ErrInvalidPath
+	}
+	if t.done {
+		return nil, storage.ErrTxDone
+	}
+
+	now := riposo.EpochFromTime(t.b.cc.Now())
+	ns, _ := path.Split()
+	t.backup(ns)
+
+	var deleted *schema.Object
+	t.b.delete(path, now, true, func(_ string, obj *schema.Object, exact bool) {
+		if exact {
+			deleted = obj
+		}
+	})
+	if deleted == nil {
+		return nil, storage.ErrNotFound
+	}
+	return deleted, nil
+}
+
+// ListAll implements Transaction interface.
+func (t *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
+	if !path.IsNode() {
+		return nil, storage.ErrInvalidPath
+	}
+	if t.done {
+		return nil, storage.ErrTxDone
+	}
+
+	ns, _ := path.Split()
+
+	t.b.tree.Each(ns, opt.Condition, func(obj *schema.Object) {
+		objs = append(objs, obj)
+	})
+
+	if opt.Include == storage.IncludeAll {
+		t.b.dead.Each(ns, opt.Condition, func(obj *schema.Object) {
+			objs = append(objs, obj)
+		})
+	}
+
+	objs = paginationFilter(objs, opt.Pagination)
+	if len(opt.Sort) != 0 {
+		sort.Sort(&objectSlice{Slice: objs, Sort: opt.Sort})
+	}
+	if opt.Limit > 0 && len(objs) > opt.Limit {
+		objs = objs[:opt.Limit]
+	}
+	return objs, nil
+}
+
+// CountAll implements Transaction interface.
+func (t *transaction) CountAll(path riposo.Path, opt storage.CountOptions) (int64, error) {
+	if !path.IsNode() {
+		return 0, storage.ErrInvalidPath
+	}
+	if t.done {
+		return 0, storage.ErrTxDone
+	}
+
+	ns, _ := path.Split()
+	cnt := int64(0)
+
+	t.b.tree.Each(ns, opt.Condition, func(obj *schema.Object) {
+		cnt++
+	})
+	return cnt, nil
+}
+
+// DeleteAll implements Transaction interface.
+func (t *transaction) DeleteAll(paths []riposo.Path) (modTime riposo.Epoch, deleted []riposo.Path, _ error) {
+	for _, path := range paths {
+		if path.IsNode() {
+			return 0, nil, storage.ErrInvalidPath
+		}
+	}
+	if t.done {
+		return 0, nil, storage.ErrTxDone
+	}
+	if len(paths) == 0 {
+		return 0, nil, nil
+	}
+
+	now := riposo.EpochFromTime(t.b.cc.Now())
+	for _, path := range paths {
+		ns, _ := path.Split()
+		t.backup(ns)
+
+		t.b.delete(path, now, false, func(ns string, obj *schema.Object, exact bool) {
+			if exact && obj.ModTime > modTime {
+				modTime = obj.ModTime
+			}
+			deleted = append(deleted, riposo.JoinPath(ns, obj.ID))
+		})
+	}
+	return
+}
+
+// Purge implements Transaction interface.
+func (t *transaction) Purge(olderThan riposo.Epoch) (cnt int64, err error) {
+	if t.done {
+		return 0, storage.ErrTxDone
+	}
+
+	for ns, node := range t.b.dead {
+		t.backup(ns)
+
+		for oid, obj := range node.objects {
+			if olderThan == 0 || obj.ModTime < olderThan {
+				delete(node.objects, oid)
+				cnt++
+			}
+		}
+		if len(node.objects) == 0 {
+			delete(t.b.dead, ns)
+		}
+	}
+	return
+}
+
+func (t *transaction) backup(ns string) {
+	if t.flushed {
+		return
+	}
+
+	if t.xtree == nil {
+		t.xtree = make(objectTree)
+	}
+	if _, ok := t.xtree[ns]; !ok {
+		t.xtree[ns] = t.b.tree[ns].Copy()
+	}
+
+	if t.xdead == nil {
+		t.xdead = make(objectTree)
+	}
+	if _, ok := t.xdead[ns]; !ok {
+		t.xdead[ns] = t.b.dead[ns].Copy()
+	}
+}
+
+func (t *transaction) restore(target, source objectTree) {
+	for key, node := range source {
+		if node == nil {
+			delete(target, key)
+		} else {
+			target[key] = node
 		}
 	}
 }

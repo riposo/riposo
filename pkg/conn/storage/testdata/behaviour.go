@@ -2,7 +2,6 @@ package testdata
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strconv"
 	"sync"
@@ -56,7 +55,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 	})
 
 	Ψ.AfterEach(func() {
-		Ω.Expect(tx.Rollback()).To(Ω.Or(Ω.Succeed(), Ω.MatchError(sql.ErrTxDone)))
+		Ω.Expect(tx.Rollback()).To(Ω.Or(Ω.Succeed(), Ω.MatchError(storage.ErrTxDone)))
 	})
 
 	Ψ.It("connects and migrates", func() {
@@ -65,6 +64,40 @@ func BehavesLikeBackend(link *LikeBackend) {
 
 	Ψ.It("pings", func() {
 		Ω.Expect(subject.Ping(ctx)).To(Ω.Succeed())
+	})
+
+	Ψ.It("is single-use", func() {
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+		Ω.Expect(tx.Rollback()).To(Ω.MatchError(storage.ErrTxDone))
+		Ω.Expect(tx.Commit()).To(Ω.MatchError(storage.ErrTxDone))
+		Ω.Expect(tx.Flush()).To(Ω.MatchError(storage.ErrTxDone))
+	})
+
+	Ψ.It("is transactional", func() {
+		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
+		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
+
+		h1, err := tx.GetForUpdate("/objects/EPR.ID")
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		h1.Object().Extra = []byte(`{"meta":true}`)
+		Ω.Expect(tx.Update(h1)).To(Ω.Succeed())
+		Ω.Expect(tx.Delete("/objects/ITR.ID")).To(Ω.BeAssignableToTypeOf(&schema.Object{}))
+
+		o1, err := tx.Get("/objects/EPR.ID")
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(o1.ID).To(Ω.Equal("EPR.ID"))
+		_, err = tx.Get("/objects/ITR.ID")
+		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+
+		tx2, err := subject.Begin(ctx)
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		defer tx2.Rollback()
+
+		_, err = tx2.Get("/objects/EPR.ID")
+		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
+		_, err = tx2.Get("/objects/ITR.ID")
+		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
 	})
 
 	Ψ.It("flushes", func() {
@@ -180,6 +213,8 @@ func BehavesLikeBackend(link *LikeBackend) {
 	})
 
 	Ψ.It("creates in parallel", func() {
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+
 		wg := new(sync.WaitGroup)
 		for t := 0; t < 5; t++ {
 			wg.Add(1)

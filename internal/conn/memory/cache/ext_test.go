@@ -1,9 +1,6 @@
 package cache
 
 // NumEntries is a test helper.
-func (b *backend) NumEntries() (int64, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	return int64(len(b.keys)), nil
+func (t *transaction) NumEntries() (int64, error) {
+	return int64(len(t.b.keys)), nil
 }

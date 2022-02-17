@@ -1,5 +1,7 @@
 linters-settings:
   errcheck:
     exclude-functions:
-      - (*github.com/riposo/riposo/pkg/api.Txn).Abort
+      - (*github.com/riposo/riposo/pkg/api.Txn).Rollback
+      - (github.com/riposo/riposo/pkg/conn/cache.Transaction).Rollback
+      - (github.com/riposo/riposo/pkg/conn/permission.Transaction).Rollback
       - (github.com/riposo/riposo/pkg/conn/storage.Transaction).Rollback

@@ -30,7 +30,7 @@ var _ = Describe("Actions", func() {
 	})
 
 	AfterEach(func() {
-		Expect(txn.Abort()).To(Succeed())
+		Expect(txn.Rollback()).To(Succeed())
 	})
 
 	It("gets", func() {
