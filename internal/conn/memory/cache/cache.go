@@ -21,7 +21,19 @@ type item struct {
 	exp time.Time
 }
 
-func (it *item) Expired(now time.Time) bool { return it.exp.Before(now) }
+func (it *item) Copy() *item {
+	if it == nil {
+		return nil
+	}
+
+	val := make([]byte, len(it.val))
+	copy(val, it.val)
+	return &item{val: val, exp: it.exp}
+}
+
+func (it *item) Expired(now time.Time) bool {
+	return it.exp.Before(now)
+}
 
 type backend struct {
 	keys map[string]*item
@@ -216,6 +228,6 @@ func (t *transaction) backup(key string) {
 	}
 
 	if _, ok := t.xkeys[key]; !ok {
-		t.xkeys[key] = t.b.keys[key]
+		t.xkeys[key] = t.b.keys[key].Copy()
 	}
 }
