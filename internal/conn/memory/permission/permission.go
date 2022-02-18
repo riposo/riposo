@@ -93,7 +93,11 @@ func (t *transaction) Rollback() error {
 		}
 	}
 	for k, v := range t.xperms {
-		t.b.perms[k] = v
+		if v == nil {
+			delete(t.b.perms, k)
+		} else {
+			t.b.perms[k] = v
+		}
 	}
 
 	return nil
@@ -105,9 +109,11 @@ func (t *transaction) Flush() error {
 		return permission.ErrTxDone
 	}
 
-	t.xusers, t.xperms = t.b.users, t.b.perms
-	t.flushed = true
-
+	if !t.flushed {
+		t.flushed = true
+		t.xusers = t.b.users
+		t.xperms = t.b.perms
+	}
 	t.b.users = make(map[string]util.Set)
 	t.b.perms = make(map[riposo.Path]map[string]util.Set)
 	return nil

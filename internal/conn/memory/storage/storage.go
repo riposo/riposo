@@ -131,8 +131,20 @@ func (t *transaction) Rollback() error {
 		return nil
 	}
 
-	t.restore(t.b.tree, t.xtree)
-	t.restore(t.b.dead, t.xdead)
+	for k, v := range t.xtree {
+		if v == nil {
+			delete(t.b.tree, k)
+		} else {
+			t.b.tree[k] = v
+		}
+	}
+	for k, v := range t.xdead {
+		if v == nil {
+			delete(t.b.dead, k)
+		} else {
+			t.b.dead[k] = v
+		}
+	}
 	return nil
 }
 
@@ -147,7 +159,6 @@ func (t *transaction) Flush() error {
 		t.xtree = t.b.tree
 		t.xdead = t.b.dead
 	}
-
 	t.b.tree = make(objectTree)
 	t.b.dead = make(objectTree)
 	return nil
@@ -399,15 +410,5 @@ func (t *transaction) backup(ns string) {
 	}
 	if _, ok := t.xdead[ns]; !ok {
 		t.xdead[ns] = t.b.dead[ns].Copy()
-	}
-}
-
-func (t *transaction) restore(target, source objectTree) {
-	for key, node := range source {
-		if node == nil {
-			delete(target, key)
-		} else {
-			target[key] = node
-		}
 	}
 }

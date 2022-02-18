@@ -135,11 +135,11 @@ func (t *transaction) Rollback() error {
 		return nil
 	}
 
-	for key, it := range t.xkeys {
-		if it == nil {
-			delete(t.b.keys, key)
+	for k, v := range t.xkeys {
+		if v == nil {
+			delete(t.b.keys, k)
 		} else {
-			t.b.keys[key] = it
+			t.b.keys[k] = v
 		}
 	}
 	return nil
