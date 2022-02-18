@@ -24,7 +24,7 @@ var _ = Describe("Group Model", func() {
 	})
 
 	AfterEach(func() {
-		Expect(txn.Abort()).To(Succeed())
+		Expect(txn.Rollback()).To(Succeed())
 	})
 
 	Describe("Create", func() {

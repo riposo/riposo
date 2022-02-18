@@ -21,6 +21,8 @@ var (
 	ErrObjectExists = errors.New("object already exists")
 	// ErrInvalidPath is returned when an invalid path is used for the method.
 	ErrInvalidPath = errors.New("invalid path")
+	// ErrTxDone is returned when a transaction has expired.
+	ErrTxDone = errors.New("transaction has already been committed or rolled back")
 )
 
 // Backend defines the abstract storage interface.
@@ -35,11 +37,12 @@ type Backend interface {
 	Close() error
 }
 
-// Transaction is a transaction.
+// Transaction is a transaction. Please note that transactions are not
+// guaranteed to be thread-safe and must not be used across multiple goroutines.
 type Transaction interface {
 	// Commit commits the transaction.
 	Commit() error
-	// Rollback aborts the transaction.
+	// Rollback rolls back the transaction.
 	Rollback() error
 
 	// Flush removes every object from this backend.

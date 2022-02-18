@@ -33,6 +33,21 @@ func (n *objectNode) Len() int {
 	return 0
 }
 
+func (n *objectNode) Copy() *objectNode {
+	if n == nil {
+		return nil
+	}
+
+	cn := &objectNode{
+		objects: make(map[string]*schema.Object, len(n.objects)),
+		modTime: n.modTime,
+	}
+	for objID, obj := range n.objects {
+		cn.objects[objID] = obj.Copy()
+	}
+	return cn
+}
+
 func (n *objectNode) Get(objID string) *schema.Object {
 	if n != nil {
 		return n.objects[objID]

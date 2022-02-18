@@ -78,8 +78,8 @@ func (t *Txn) Commit() error {
 	)
 }
 
-// Abort is used internally to abort all transactions.
-func (t *Txn) Abort() error {
+// Rollback is used internally to rollback all transactions.
+func (t *Txn) Rollback() error {
 	return multierr.Combine(
 		t.Store.Rollback(),
 		t.Perms.Rollback(),

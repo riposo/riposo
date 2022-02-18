@@ -181,6 +181,10 @@ func (o *Object) UnmarshalJSON(p []byte) error {
 
 // Copy creates a copy of the object.
 func (o *Object) Copy() *Object {
+	if o == nil {
+		return nil
+	}
+
 	extra := make([]byte, len(o.Extra))
 	copy(extra, o.Extra)
 

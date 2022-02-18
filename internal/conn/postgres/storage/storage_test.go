@@ -24,7 +24,9 @@ var _ = Describe("Backend", func() {
 		link.Backend = instance
 	})
 
-	testdata.BehavesLikeBackend(&link)
+	Describe("common", func() {
+		testdata.BehavesLikeBackend(&link)
+	})
 
 	It("supports CONTAINS ANY filters", func() {
 		tx, err := instance.Begin(ctx)

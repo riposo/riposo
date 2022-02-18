@@ -34,8 +34,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 	})
 
 	Ψ.AfterEach(func() {
-		Ω.Expect(tx.Flush()).To(Ω.Succeed())
-		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+		Ω.Expect(tx.Rollback()).To(Ω.Or(Ω.Succeed(), Ω.MatchError(cache.ErrTxDone)))
 	})
 
 	Ψ.It("connects and migrates", func() {
@@ -44,6 +43,33 @@ func BehavesLikeBackend(link *LikeBackend) {
 
 	Ψ.It("pings", func() {
 		Ω.Expect(subject.Ping(ctx)).To(Ω.Succeed())
+	})
+
+	Ψ.It("is single-use", func() {
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+		Ω.Expect(tx.Rollback()).To(Ω.MatchError(cache.ErrTxDone))
+		Ω.Expect(tx.Commit()).To(Ω.MatchError(cache.ErrTxDone))
+		Ω.Expect(tx.Flush()).To(Ω.MatchError(cache.ErrTxDone))
+	})
+
+	Ψ.It("is transactional", func() {
+		Ω.Expect(tx.Set("k1", []byte("val"), time.Now().Add(time.Hour))).To(Ω.Succeed())
+		Ω.Expect(tx.Set("k1", []byte("upd"), time.Now().Add(time.Hour))).To(Ω.Succeed())
+		Ω.Expect(tx.Set("k2", []byte("val"), time.Now().Add(time.Hour))).To(Ω.Succeed())
+		Ω.Expect(tx.Del("k2")).To(Ω.Succeed())
+		Ω.Expect(tx.Get("k1")).To(Ω.Equal([]byte("upd")))
+		_, err := tx.Get("k2")
+		Ω.Expect(err).To(Ω.MatchError(cache.ErrNotFound))
+		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
+
+		tx2, err := subject.Begin(ctx)
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		defer tx2.Rollback()
+
+		_, err = tx2.Get("k1")
+		Ω.Expect(err).To(Ω.MatchError(cache.ErrNotFound))
+		_, err = tx2.Get("k2")
+		Ω.Expect(err).To(Ω.MatchError(cache.ErrNotFound))
 	})
 
 	Ψ.It("flushes", func() {

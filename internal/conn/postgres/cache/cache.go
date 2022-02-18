@@ -137,10 +137,20 @@ type transaction struct {
 	ctx context.Context
 }
 
+// Commit implements cache.Transaction interface.
+func (tx *transaction) Commit() error {
+	return normErr(tx.Tx.Commit())
+}
+
+// Rollback implements cache.Transaction interface.
+func (tx *transaction) Rollback() error {
+	return normErr(tx.Tx.Rollback())
+}
+
 // Flush implements cache.Transaction interface.
 func (tx *transaction) Flush() error {
 	_, err := tx.ExecContext(tx.ctx, `TRUNCATE cache_keys`)
-	return err
+	return normErr(err)
 }
 
 // Get implements cache.Transaction.
@@ -153,9 +163,7 @@ func (tx *transaction) Get(key string) ([]byte, error) {
 	err := tx.StmtContext(tx.ctx, tx.cn.stmt.getKey).
 		QueryRowContext(tx.ctx, key, time.Now().UTC()).
 		Scan(&val)
-	if err == sql.ErrNoRows {
-		return nil, cache.ErrNotFound
-	} else if err != nil {
+	if err = normErr(err); err != nil {
 		return nil, err
 	}
 	return val, nil
@@ -170,7 +178,7 @@ func (tx *transaction) Set(key string, val []byte, exp time.Time) error {
 	_, err := tx.
 		StmtContext(tx.ctx, tx.cn.stmt.setKey).
 		ExecContext(tx.ctx, key, val, exp.UTC())
-	return err
+	return normErr(err)
 }
 
 // Del implements cache.Transaction.
@@ -184,7 +192,14 @@ func (tx *transaction) Del(key string) error {
 		StmtContext(tx.ctx, tx.cn.stmt.delKey).
 		QueryRowContext(tx.ctx, key, time.Now().UTC()).
 		Scan(&s)
-	if err == sql.ErrNoRows {
+	return normErr(err)
+}
+
+func normErr(err error) error {
+	switch err {
+	case sql.ErrTxDone:
+		return cache.ErrTxDone
+	case sql.ErrNoRows:
 		return cache.ErrNotFound
 	}
 	return err

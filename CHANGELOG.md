@@ -16,6 +16,8 @@
 - Add support for configuration files
   ([#23](https://github.com/riposo/riposo/pull/23))
 - Allow to define custom rules ([#24](https://github.com/riposo/riposo/pull/24))
+- Make in-memory stores transactional
+  ([#37](https://github.com/riposo/riposo/pull/37))
 
 # 0.1.0 (2021-03-26)
 

@@ -97,7 +97,7 @@ func transactional(cns *conn.Set, hlp riposo.Helpers, am auth.Method) func(http.
 				api.Render(w, err)
 				return
 			}
-			defer txn.Abort()
+			defer txn.Rollback()
 
 			// embed txn into request context
 			r = r.WithContext(api.WithTxn(r.Context(), txn))

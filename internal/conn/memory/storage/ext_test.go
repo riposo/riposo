@@ -1,9 +1,6 @@
 package storage
 
 // NumEntries is a test helper.
-func (b *backend) NumEntries() (int64, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	return int64(b.tree.Len()), nil
+func (t *transaction) NumEntries() (int64, error) {
+	return int64(t.b.tree.Len()), nil
 }

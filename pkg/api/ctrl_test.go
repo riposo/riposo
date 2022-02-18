@@ -74,7 +74,7 @@ var _ = Describe("Routes.Resource", func() {
 	})
 
 	AfterEach(func() {
-		Expect(txn.Abort()).To(Succeed())
+		Expect(txn.Rollback()).To(Succeed())
 	})
 
 	Describe("GET /resources", func() {
