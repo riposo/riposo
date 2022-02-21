@@ -7,8 +7,6 @@ import (
 
 // Callbacks are a set of callbacks around a model.
 type Callbacks interface {
-	// Match returns true if callbacks are applicable for path.
-	Match(path riposo.Path) bool
 	// OnCreate is triggered on create.
 	OnCreate(txn *Txn, path riposo.Path) CreateCallback
 	// OnUpdate is triggered on update.
@@ -54,7 +52,6 @@ type DeleteAllCallback interface {
 // NoopCallbacks is an embeddable noop callback type.
 type NoopCallbacks struct{}
 
-func (NoopCallbacks) Match(riposo.Path) bool                              { return false }
 func (NoopCallbacks) OnCreate(_ *Txn, _ riposo.Path) CreateCallback       { return nil }
 func (NoopCallbacks) OnUpdate(_ *Txn, _ riposo.Path) UpdateCallback       { return nil }
 func (NoopCallbacks) OnPatch(_ *Txn, _ riposo.Path) PatchCallback         { return nil }

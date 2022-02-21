@@ -3,6 +3,7 @@ package rule
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/riposo/riposo/pkg/api"
@@ -11,13 +12,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// A Rule interface.
-type Rule interface {
+// A Set is a collection of rules grouped by type.
+type Set interface {
 	api.Component
 }
 
-// Factory initializes the Rule.
-type Factory func(*yaml.Node) (Rule, error)
+// Factory initializes the rule Set.
+type Factory func([]*yaml.Node) (Set, error)
 
 // ----------------------------------------------------------------------------
 
@@ -45,59 +46,58 @@ type config struct {
 	Type string `yaml:"type"`
 }
 
-// Set contains the set of loaded rules.
-type Set struct {
-	rules []Rule
-}
+type closer []Set
 
 // Init initializes registered rules.
-func Init(ctx context.Context, rts *api.Routes, hlp riposo.Helpers, nodes []*yaml.Node) (*Set, error) {
+func Init(ctx context.Context, rts *api.Routes, hlp riposo.Helpers, nodes []*yaml.Node) (io.Closer, error) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
-	set := &Set{
-		rules: make([]Rule, 0, len(nodes)),
-	}
-
+	typed := make(map[string][]*yaml.Node)
 	for _, node := range nodes {
 		var c config
 		if err := node.Decode(&c); err != nil {
-			_ = set.Close()
 			return nil, err
 		}
 
 		// ensure type is set
 		if c.Type == "" {
-			_ = set.Close()
 			return nil, fmt.Errorf("rule configuration %v is missing type", node)
 		}
 
 		// check if available
-		fct, ok := registry[c.Type]
+		_, ok := registry[c.Type]
 		if !ok {
-			_ = set.Close()
 			return nil, fmt.Errorf("rule %q is not available", c.Type)
 		}
 
-		// enable plugin
-		rule, err := fct(node)
-		if err != nil {
-			_ = set.Close()
-			return nil, fmt.Errorf("rule %q init failed with: %w", c.Type, err)
-		}
-
-		// store rule
-		set.rules = append(set.rules, rule)
+		// store config
+		typed[c.Type] = append(typed[c.Type], node)
 	}
 
-	return set, nil
+	cc := make(closer, 0, len(typed))
+	for typ, nodes := range typed {
+		// get factory
+		fct := registry[typ]
+
+		// enable plugin
+		set, err := fct(nodes)
+		if err != nil {
+			_ = cc.Close()
+			return nil, fmt.Errorf("rule %q init failed with: %w", typ, err)
+		}
+
+		// store set
+		cc = append(cc, set)
+	}
+
+	return cc, nil
 }
 
 // Close closes all plugins.
-func (s *Set) Close() error {
-	var err error
-	for _, rule := range s.rules {
-		err = multierr.Append(err, rule.Close())
+func (cc closer) Close() (err error) {
+	for _, set := range cc {
+		err = multierr.Append(err, set.Close())
 	}
 	return err
 }
