@@ -32,7 +32,7 @@ func (a *actions) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
 
 func (a *actions) Create(txn *Txn, path riposo.Path, payload *schema.Resource) error {
 	// prepare callbacks
-	callbacks := a.prepareCallbacks(path, func(cb Callbacks) interface{} {
+	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
 		return cb.OnCreate(txn, path)
 	})
 	defer callbacks.Release()
@@ -50,9 +50,9 @@ func (a *actions) Create(txn *Txn, path riposo.Path, payload *schema.Resource) e
 		return err
 	}
 
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(CreateCallback).AfterCreate(payload); err != nil {
+	// run after callbacks in reverse order
+	for i := len(callbacks.S) - 1; i >= 0; i-- {
+		if err := callbacks.S[i].(CreateCallback).AfterCreate(payload); err != nil {
 			return err
 		}
 	}
@@ -62,7 +62,7 @@ func (a *actions) Create(txn *Txn, path riposo.Path, payload *schema.Resource) e
 
 func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
 	// prepare callbacks
-	callbacks := a.prepareCallbacks(path, func(cb Callbacks) interface{} {
+	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
 		return cb.OnUpdate(txn, path)
 	})
 	defer callbacks.Release()
@@ -88,9 +88,9 @@ func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pa
 	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
 
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(UpdateCallback).AfterUpdate(res); err != nil {
+	// run after callbacks in reverse order
+	for i := len(callbacks.S) - 1; i >= 0; i-- {
+		if err := callbacks.S[i].(UpdateCallback).AfterUpdate(payload); err != nil {
 			return nil, err
 		}
 	}
@@ -100,7 +100,7 @@ func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pa
 
 func (a *actions) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
 	// prepare callbacks
-	callbacks := a.prepareCallbacks(path, func(cb Callbacks) interface{} {
+	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
 		return cb.OnPatch(txn, path)
 	})
 	defer callbacks.Release()
@@ -126,9 +126,9 @@ func (a *actions) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pay
 	// prepare response
 	res := &schema.Resource{Data: hs.Object(), Permissions: ps}
 
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(PatchCallback).AfterPatch(res); err != nil {
+	// run after callbacks in reverse order
+	for i := len(callbacks.S) - 1; i >= 0; i-- {
+		if err := callbacks.S[i].(PatchCallback).AfterPatch(payload); err != nil {
 			return nil, err
 		}
 	}
@@ -138,7 +138,7 @@ func (a *actions) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pay
 
 func (a *actions) Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error) {
 	// prepare callbacks
-	callbacks := a.prepareCallbacks(path, func(cb Callbacks) interface{} {
+	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
 		return cb.OnDelete(txn, path)
 	})
 	defer callbacks.Release()
@@ -156,9 +156,9 @@ func (a *actions) Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*sche
 		return nil, err
 	}
 
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteCallback).AfterDelete(deleted); err != nil {
+	// run after callbacks in reverse order
+	for i := len(callbacks.S) - 1; i >= 0; i-- {
+		if err := callbacks.S[i].(DeleteCallback).AfterDelete(deleted); err != nil {
 			return nil, err
 		}
 	}
@@ -168,7 +168,7 @@ func (a *actions) Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*sche
 
 func (a *actions) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, error) {
 	// prepare callbacks
-	callbacks := a.prepareCallbacks(path, func(cb Callbacks) interface{} {
+	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
 		return cb.OnDeleteAll(txn, path)
 	})
 	defer callbacks.Release()
@@ -186,9 +186,9 @@ func (a *actions) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo
 		return 0, err
 	}
 
-	// run after callbacks
-	for _, c := range callbacks.S {
-		if err := c.(DeleteAllCallback).AfterDeleteAll(modTime, deleted); err != nil {
+	// run after callbacks in reverse order
+	for i := len(callbacks.S) - 1; i >= 0; i-- {
+		if err := callbacks.S[i].(DeleteAllCallback).AfterDeleteAll(modTime, deleted); err != nil {
 			return 0, err
 		}
 	}
@@ -196,13 +196,11 @@ func (a *actions) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo
 	return modTime, nil
 }
 
-func (a *actions) prepareCallbacks(path riposo.Path, fn func(Callbacks) interface{}) *callbacksSlice {
+func (a *actions) prepareCallbacks(fn func(Callbacks) interface{}) *callbacksSlice {
 	slice := poolCallbacksSlice()
 	for _, cb := range a.cbs {
-		if cb.Match(path) {
-			if cm := fn(cb); cm != nil {
-				slice.S = append(slice.S, cm)
-			}
+		if cm := fn(cb); cm != nil {
+			slice.S = append(slice.S, cm)
 		}
 	}
 	return slice
