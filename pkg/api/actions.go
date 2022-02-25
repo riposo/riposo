@@ -90,7 +90,7 @@ func (a *actions) Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Reso
 
 	// run after callbacks in reverse order
 	for i := len(callbacks.S) - 1; i >= 0; i-- {
-		if err := callbacks.S[i].(UpdateCallback).AfterUpdate(payload); err != nil {
+		if err := callbacks.S[i].(UpdateCallback).AfterUpdate(res); err != nil {
 			return nil, err
 		}
 	}
@@ -128,7 +128,7 @@ func (a *actions) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resou
 
 	// run after callbacks in reverse order
 	for i := len(callbacks.S) - 1; i >= 0; i-- {
-		if err := callbacks.S[i].(PatchCallback).AfterPatch(payload); err != nil {
+		if err := callbacks.S[i].(PatchCallback).AfterPatch(res); err != nil {
 			return nil, err
 		}
 	}
