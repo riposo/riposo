@@ -234,7 +234,7 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	}
 
 	// update resource & permissions
-	res, err := c.act.Update(req.Txn, req.Path, hs, &payload)
+	res, err := c.act.Update(req.Txn, hs, &payload)
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	}
 
 	// patch resource & permissions
-	res, err := c.act.Patch(req.Txn, req.Path, hs, &payload)
+	res, err := c.act.Patch(req.Txn, hs, &payload)
 	if err != nil {
 		return err
 	}

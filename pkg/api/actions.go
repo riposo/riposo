@@ -10,8 +10,8 @@ import (
 type Actions interface {
 	Get(txn *Txn, path riposo.Path) (*schema.Resource, error)
 	Create(txn *Txn, path riposo.Path, payload *schema.Resource) error
-	Update(*Txn, riposo.Path, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
-	Patch(*Txn, riposo.Path, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
+	Update(*Txn, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
+	Patch(*Txn, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
 	Delete(*Txn, riposo.Path, *schema.Object) (*schema.Object, error)
 	DeleteAll(*Txn, riposo.Path, []string) (riposo.Epoch, error)
 }
@@ -60,10 +60,10 @@ func (a *actions) Create(txn *Txn, path riposo.Path, payload *schema.Resource) e
 	return nil
 }
 
-func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
+func (a *actions) Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
 	// prepare callbacks
 	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
-		return cb.OnUpdate(txn, path)
+		return cb.OnUpdate(txn, hs.Path())
 	})
 	defer callbacks.Release()
 
@@ -75,12 +75,12 @@ func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pa
 	}
 
 	// update actions & permissions
-	if err := a.mod.Update(txn, path, hs, payload); err != nil {
+	if err := a.mod.Update(txn, hs, payload); err != nil {
 		return nil, err
 	}
 
 	// fetch updated permissions
-	ps, err := txn.Perms.GetPermissions(path)
+	ps, err := txn.Perms.GetPermissions(hs.Path())
 	if err != nil {
 		return nil, err
 	}
@@ -98,10 +98,10 @@ func (a *actions) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pa
 	return res, nil
 }
 
-func (a *actions) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
+func (a *actions) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) (*schema.Resource, error) {
 	// prepare callbacks
 	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
-		return cb.OnPatch(txn, path)
+		return cb.OnPatch(txn, hs.Path())
 	})
 	defer callbacks.Release()
 
@@ -113,12 +113,12 @@ func (a *actions) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, pay
 	}
 
 	// patch actions & permissions
-	if err := a.mod.Patch(txn, path, hs, payload); err != nil {
+	if err := a.mod.Patch(txn, hs, payload); err != nil {
 		return nil, err
 	}
 
 	// fetch updated permissions
-	ps, err := txn.Perms.GetPermissions(path)
+	ps, err := txn.Perms.GetPermissions(hs.Path())
 	if err != nil {
 		return nil, err
 	}

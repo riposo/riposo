@@ -32,6 +32,7 @@ type updateHandle struct {
 }
 
 func (h *updateHandle) Object() *schema.Object { return h.obj }
+func (h *updateHandle) Path() riposo.Path      { return h.path }
 
 // --------------------------------------------------------------------
 

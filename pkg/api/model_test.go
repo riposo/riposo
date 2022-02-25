@@ -83,7 +83,7 @@ var _ = Describe("Model", func() {
 		})
 
 		It("updates without permissions", func() {
-			Expect(subject.Update(txn, "/objects/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Update(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"updated":true}`)},
 			})).To(Succeed())
 
@@ -99,7 +99,7 @@ var _ = Describe("Model", func() {
 		})
 
 		It("updates with permissions", func() {
-			Expect(subject.Update(txn, "/objects/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Update(txn, hs, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"updated":true}`)},
 				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
@@ -131,7 +131,7 @@ var _ = Describe("Model", func() {
 		})
 
 		It("patches without permissions", func() {
-			Expect(subject.Patch(txn, "/objects/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Patch(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"b":4,"c":3}`)},
 			})).To(Succeed())
 
@@ -147,7 +147,7 @@ var _ = Describe("Model", func() {
 		})
 
 		It("patches with permissions", func() {
-			Expect(subject.Patch(txn, "/objects/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Patch(txn, hs, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"b":4,"c":3}`)},
 				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())

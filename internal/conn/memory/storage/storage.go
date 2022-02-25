@@ -25,6 +25,7 @@ type updateHandle struct {
 }
 
 func (t *updateHandle) Object() *schema.Object { return t.obj }
+func (t *updateHandle) Path() riposo.Path      { return t.path }
 
 type backend struct {
 	cc   clock.Clock

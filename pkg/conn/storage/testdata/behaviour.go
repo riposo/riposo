@@ -173,6 +173,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 
 		h, err := tx.GetForUpdate("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(h.Path()).To(Ω.Equal(riposo.Path("/objects/EPR.ID")))
 		Ω.Expect(h.Object().ID).To(Ω.Equal(o1.ID))
 		Ω.Expect(h.Object()).NotTo(Ω.BeIdenticalTo(o1))
 

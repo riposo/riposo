@@ -13,9 +13,9 @@ type Model interface {
 	// Create creates a single resource.
 	Create(txn *Txn, path riposo.Path, payload *schema.Resource) error
 	// Update updates a resource.
-	Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error
+	Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error
 	// Patch patches a resource.
-	Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error
+	Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error
 	// Delete deletes a resource.
 	Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error)
 	// DeleteAll deletes resources.
@@ -60,18 +60,18 @@ func (DefaultModel) Create(txn *Txn, path riposo.Path, payload *schema.Resource)
 	return txn.Perms.CreatePermissions(path.WithObjectID(payload.Data.ID), payload.Permissions)
 }
 
-func (DefaultModel) Update(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// update existing object with received data
 	hs.Object().Update(payload.Data)
-	return update(txn, hs, path, payload.Permissions)
+	return update(txn, hs, payload.Permissions)
 }
 
-func (DefaultModel) Patch(txn *Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// patch existing object with received data
 	if err := hs.Object().Patch(payload.Data); err != nil {
 		return err
 	}
-	return update(txn, hs, path, payload.Permissions)
+	return update(txn, hs, payload.Permissions)
 }
 
 func (DefaultModel) Delete(txn *Txn, path riposo.Path, _ *schema.Object) (*schema.Object, error) {
@@ -100,7 +100,7 @@ func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (ripo
 	return txn.Store.DeleteAll(paths)
 }
 
-func update(txn *Txn, hs storage.UpdateHandle, path riposo.Path, ps schema.PermissionSet) error {
+func update(txn *Txn, hs storage.UpdateHandle, ps schema.PermissionSet) error {
 	// update object
 	if hs != nil {
 		if err := txn.Store.Update(hs); err != nil {
@@ -114,7 +114,7 @@ func update(txn *Txn, hs storage.UpdateHandle, path riposo.Path, ps schema.Permi
 		if user := txn.User; user != nil && user.ID != riposo.Everyone {
 			ps.Add("write", user.ID)
 		}
-		if err := txn.Perms.MergePermissions(path, ps); err != nil {
+		if err := txn.Perms.MergePermissions(hs.Path(), ps); err != nil {
 			return err
 		}
 	}
