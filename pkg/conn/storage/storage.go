@@ -81,6 +81,8 @@ type Transaction interface {
 type UpdateHandle interface {
 	// Object returns the transactional object.
 	Object() *schema.Object
+	// Path returns the resource path.
+	Path() riposo.Path
 }
 
 var (

@@ -37,7 +37,7 @@ func (m Model) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) 
 }
 
 // Update overrides.
-func (m Model) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Update(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -45,13 +45,13 @@ func (m Model) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, p
 	}
 
 	// purge principal
-	principal := path.String()
+	principal := hs.Path().String()
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.DefaultModel.Update(txn, path, hs, payload); err != nil {
+	if err := m.DefaultModel.Update(txn, hs, payload); err != nil {
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (m Model) Update(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, p
 }
 
 // Patch overrides.
-func (m Model) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Patch(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
 	// normalize payload
 	_, err := normGroup(payload.Data, false)
 	if err != nil {
@@ -72,13 +72,13 @@ func (m Model) Patch(txn *api.Txn, path riposo.Path, hs storage.UpdateHandle, pa
 	}
 
 	// purge principal
-	principal := path.String()
+	principal := hs.Path().String()
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.DefaultModel.Patch(txn, path, hs, payload); err != nil {
+	if err := m.DefaultModel.Patch(txn, hs, payload); err != nil {
 		return err
 	}
 

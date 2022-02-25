@@ -60,7 +60,7 @@ var _ = Describe("Actions", func() {
 		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(subject.Update(txn, "/objects/EPR.ID", hs, &schema.Resource{
+		Expect(subject.Update(txn, hs, &schema.Resource{
 			Data: &schema.Object{Extra: []byte(`{"updated":true}`)},
 		})).To(Equal(&schema.Resource{
 			Data: &schema.Object{
@@ -78,7 +78,7 @@ var _ = Describe("Actions", func() {
 		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(subject.Patch(txn, "/objects/EPR.ID", hs, &schema.Resource{
+		Expect(subject.Patch(txn, hs, &schema.Resource{
 			Data: &schema.Object{Extra: []byte(`{"patched":true}`)},
 		})).To(Equal(&schema.Resource{
 			Data: &schema.Object{

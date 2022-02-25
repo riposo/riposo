@@ -60,21 +60,21 @@ var _ = Describe("Group Model", func() {
 		})
 
 		It("does not require members", func() {
-			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Update(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{}`)},
 			})).To(Succeed())
 			Expect(hs.Object().Extra).To(MatchJSON(`{"members":[]}`))
 		})
 
 		It("normalizes", func() {
-			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Update(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["claire","alice","","alice"]}`)},
 			})).To(Succeed())
 			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Update(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["alice","claire"]}`)},
 			})).To(Succeed())
 			Expect(txn.Perms.GetUserPrincipals("alice")).To(ContainElement("/buckets/foo/groups/EPR.ID"))
@@ -96,21 +96,21 @@ var _ = Describe("Group Model", func() {
 		})
 
 		It("allows to remain unchanged", func() {
-			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Patch(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{}`)},
 			})).To(Succeed())
 			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","bob"]}`))
 		})
 
 		It("normalizes", func() {
-			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Patch(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["claire","alice",null,"alice"]}`)},
 			})).To(Succeed())
 			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", hs, &schema.Resource{
+			Expect(subject.Patch(txn, hs, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["alice","claire"]}`)},
 			})).To(Succeed())
 			Expect(txn.Perms.GetUserPrincipals("alice")).To(ContainElement("/buckets/foo/groups/EPR.ID"))
