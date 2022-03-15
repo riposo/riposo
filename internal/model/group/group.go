@@ -97,8 +97,8 @@ func (m Model) Patch(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Reso
 }
 
 // Delete overrides.
-func (m Model) Delete(txn *api.Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error) {
-	principal := path.String()
+func (m Model) Delete(txn *api.Txn, hs storage.UpdateHandle) (*schema.Object, error) {
+	principal := hs.Path().String()
 
 	// purge principal
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
@@ -106,7 +106,7 @@ func (m Model) Delete(txn *api.Txn, path riposo.Path, exst *schema.Object) (*sch
 	}
 
 	// perform action
-	return m.DefaultModel.Delete(txn, path, exst)
+	return m.DefaultModel.Delete(txn, hs)
 }
 
 // DeleteAll deletes resources in bulk.

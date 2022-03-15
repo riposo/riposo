@@ -17,7 +17,7 @@ type Model interface {
 	// Patch patches a resource.
 	Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error
 	// Delete deletes a resource.
-	Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error)
+	Delete(txn *Txn, hs storage.UpdateHandle) (*schema.Object, error)
 	// DeleteAll deletes resources.
 	DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error)
 }
@@ -74,14 +74,14 @@ func (DefaultModel) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Res
 	return update(txn, hs, payload.Permissions)
 }
 
-func (DefaultModel) Delete(txn *Txn, path riposo.Path, _ *schema.Object) (*schema.Object, error) {
+func (DefaultModel) Delete(txn *Txn, hs storage.UpdateHandle) (*schema.Object, error) {
 	// delete permissions
-	if err := txn.Perms.DeletePermissions([]riposo.Path{path}); err != nil {
+	if err := txn.Perms.DeletePermissions([]riposo.Path{hs.Path()}); err != nil {
 		return nil, err
 	}
 
 	// delete object
-	return txn.Store.Delete(path)
+	return txn.Store.Delete(hs.Path())
 }
 
 func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
