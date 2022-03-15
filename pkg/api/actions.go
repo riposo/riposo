@@ -12,7 +12,7 @@ type Actions interface {
 	Create(txn *Txn, path riposo.Path, payload *schema.Resource) error
 	Update(*Txn, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
 	Patch(*Txn, storage.UpdateHandle, *schema.Resource) (*schema.Resource, error)
-	Delete(*Txn, riposo.Path, *schema.Object) (*schema.Object, error)
+	Delete(*Txn, storage.UpdateHandle) (*schema.Object, error)
 	DeleteAll(*Txn, riposo.Path, []string) (riposo.Epoch, error)
 }
 
@@ -136,22 +136,22 @@ func (a *actions) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resou
 	return res, nil
 }
 
-func (a *actions) Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error) {
+func (a *actions) Delete(txn *Txn, hs storage.UpdateHandle) (*schema.Object, error) {
 	// prepare callbacks
 	callbacks := a.prepareCallbacks(func(cb Callbacks) interface{} {
-		return cb.OnDelete(txn, path)
+		return cb.OnDelete(txn, hs.Path())
 	})
 	defer callbacks.Release()
 
 	// run before callbacks
 	for _, c := range callbacks.S {
-		if err := c.(DeleteCallback).BeforeDelete(exst); err != nil {
+		if err := c.(DeleteCallback).BeforeDelete(hs.Object()); err != nil {
 			return nil, err
 		}
 	}
 
 	// delete actions
-	deleted, err := a.mod.Delete(txn, path, exst)
+	deleted, err := a.mod.Delete(txn, hs)
 	if err != nil {
 		return nil, err
 	}

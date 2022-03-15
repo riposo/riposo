@@ -328,7 +328,7 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing
-	exst, err := req.Txn.Store.Get(req.Path)
+	hs, err := req.Txn.Store.GetForUpdate(req.Path)
 	if err == storage.ErrNotFound {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
@@ -336,12 +336,13 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// conditional render check
+	exst := hs.Object()
 	if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 		return err
 	}
 
 	// delete resource
-	deleted, err := c.act.Delete(req.Txn, req.Path, exst)
+	deleted, err := c.act.Delete(req.Txn, hs)
 	if err != nil {
 		return err
 	}

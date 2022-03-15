@@ -177,12 +177,12 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes the object", func() {
-			obj, err := txn.Store.Get("/objects/EPR.ID")
+			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(obj).NotTo(BeNil())
+			Expect(hs.Object()).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
 
-			Expect(subject.Delete(txn, "/objects/EPR.ID", obj)).To(Equal(&schema.Object{
+			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Deleted: true,
@@ -195,12 +195,12 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes nested", func() {
-			obj, err := txn.Store.Get("/objects/EPR.ID/nested/ITR.ID")
+			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(obj).NotTo(BeNil())
+			Expect(hs.Object()).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/ITR.ID")).To(HaveLen(1))
 
-			Expect(subject.Delete(txn, "/objects/EPR.ID/nested/ITR.ID", obj)).To(Equal(&schema.Object{
+			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
 				ID:      "ITR.ID",
 				ModTime: 1515151515678,
 				Deleted: true,

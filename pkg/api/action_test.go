@@ -93,7 +93,10 @@ var _ = Describe("Actions", func() {
 	})
 
 	It("deletes with callbacks", func() {
-		Expect(subject.Delete(txn, "/objects/EPR.ID", nil)).To(Equal(&schema.Object{
+		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
 			ID:      "EPR.ID",
 			ModTime: 1515151515678,
 			Deleted: true,

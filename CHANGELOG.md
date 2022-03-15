@@ -5,6 +5,8 @@
 - Adjust write permissions on model level
   ([#11](https://github.com/riposo/riposo/pull/11))
 - Handle neglected errors ([#15](https://github.com/riposo/riposo/pull/15))
+- Delete needs to be strictly transactional
+  ([#41](https://github.com/riposo/riposo/pull/41))
 
 ### Features
 

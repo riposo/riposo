@@ -120,15 +120,19 @@ var _ = Describe("Group Model", func() {
 	})
 
 	Describe("Delete", func() {
-		var obj *schema.Object
+		var hs storage.UpdateHandle
 
 		BeforeEach(func() {
-			obj = &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
+			obj := &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
+
+			var err error
+			hs, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Delete(txn, "/buckets/foo/groups/EPR.ID", obj)).To(BeAssignableToTypeOf(&schema.Object{}))
+			Expect(subject.Delete(txn, hs)).To(BeAssignableToTypeOf(&schema.Object{}))
 			Expect(txn.Perms.GetUserPrincipals("alice")).NotTo(ContainElement("/buckets/foo/groups/EPR.ID"))
 			Expect(txn.Perms.GetUserPrincipals("bob")).NotTo(ContainElement("/buckets/foo/groups/EPR.ID"))
 		})
