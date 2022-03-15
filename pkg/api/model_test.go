@@ -166,8 +166,6 @@ var _ = Describe("Model", func() {
 	})
 
 	Describe("Delete", func() {
-		var hs, nhs storage.UpdateHandle
-
 		BeforeEach(func() {
 			nested := DefaultModel{}
 
@@ -176,20 +174,12 @@ var _ = Describe("Model", func() {
 
 			// seed /objects/EPR.ID/nested/ITR.ID
 			Expect(nested.Create(txn, "/objects/EPR.ID/nested/*", resource())).To(Succeed())
-
-			// retrieve handles
-			var err error
-			hs, err = txn.Store.GetForUpdate("/objects/EPR.ID")
-			Expect(err).NotTo(HaveOccurred())
-
-			nhs, err = txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("deletes the object", func() {
-			obj, err := txn.Store.Get("/objects/EPR.ID")
+			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(obj).NotTo(BeNil())
+			Expect(hs.Object()).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
 
 			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
@@ -205,12 +195,12 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes nested", func() {
-			obj, err := txn.Store.Get("/objects/EPR.ID/nested/ITR.ID")
+			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(obj).NotTo(BeNil())
+			Expect(hs.Object()).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/ITR.ID")).To(HaveLen(1))
 
-			Expect(subject.Delete(txn, nhs)).To(Equal(&schema.Object{
+			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
 				ID:      "ITR.ID",
 				ModTime: 1515151515678,
 				Deleted: true,

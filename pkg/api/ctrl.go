@@ -336,7 +336,8 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// conditional render check
-	if err := renderConditional(out, req.HTTP, hs.Object().ModTime, hs.Object()); err != nil {
+	exst := hs.Object()
+	if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 		return err
 	}
 
