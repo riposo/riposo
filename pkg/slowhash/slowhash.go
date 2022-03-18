@@ -46,7 +46,7 @@ func Verify(hashed, plain string) (matched bool, err error) {
 		return argon2id.ComparePasswordAndHash(plain, hashed)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); err == bcrypt.ErrMismatchedHashAndPassword {
+	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 		return false, nil
 	} else if err != nil {
 		return false, err

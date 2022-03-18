@@ -1,3 +1,38 @@
+linters:
+  enable-all: true
+  disable:
+    - containedctx
+    - contextcheck
+    - cyclop
+    - dupl
+    - errname
+    - exhaustive
+    - exhaustivestruct
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - godox
+    - goerr113
+    - gofumpt
+    - golint
+    - gomnd
+    - interfacer
+    - ireturn
+    - lll
+    - maligned
+    - nakedret
+    - nlreturn
+    - paralleltest
+    - scopelint
+    - tagliatelle
+    - varnamelen
+    - wrapcheck
+    - wsl
 linters-settings:
   errcheck:
     exclude-functions:
@@ -5,3 +40,13 @@ linters-settings:
       - (github.com/riposo/riposo/pkg/conn/cache.Transaction).Rollback
       - (github.com/riposo/riposo/pkg/conn/permission.Transaction).Rollback
       - (github.com/riposo/riposo/pkg/conn/storage.Transaction).Rollback
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - errchkjson
+        - errorlint
+        - gosec
+    - path: 'ext_test\.go'
+      linters:
+        - testpackage

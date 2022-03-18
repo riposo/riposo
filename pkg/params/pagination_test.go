@@ -11,7 +11,8 @@ import (
 
 var _ = Describe("Pagination", func() {
 	It("parses blank", func() {
-		Expect(ParseToken("")).To(BeNil())
+		_, err := ParseToken("")
+		Expect(err).To(MatchError(ErrNoToken))
 	})
 
 	It("encodes/parses", func() {

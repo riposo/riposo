@@ -3,9 +3,12 @@ package params
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 
 	"github.com/riposo/riposo/pkg/schema"
 )
+
+var ErrNoToken = errors.New("no pagination token")
 
 // Pagination is a decoded token.
 type Pagination struct {
@@ -14,9 +17,10 @@ type Pagination struct {
 }
 
 // ParseToken parses a token from a string.
+// It may return ErrNoToken if there is no pagination token.
 func ParseToken(s string) (*Pagination, error) {
 	if s == "" {
-		return nil, nil
+		return nil, ErrNoToken
 	}
 
 	raw, err := base64.RawURLEncoding.DecodeString(s)
@@ -83,7 +87,7 @@ func newPagination(nonce string, lastObj *schema.Object, sort []SortOrder) *Pagi
 	}
 	for _, s := range sort {
 		if v := lastObj.Get(s.Field); !v.IsNull() {
-			t.LastObj[s.Field] = schema.Value(v)
+			t.LastObj[s.Field] = v
 		}
 	}
 	return t

@@ -40,13 +40,13 @@ var _ = Describe("Rebder", func() {
 	})
 
 	It("renders other errors", func() {
-		Render(w, fmt.Errorf("doh!"))
+		Render(w, fmt.Errorf("doh"))
 		Expect(w.Code).To(Equal(http.StatusInternalServerError))
 		Expect(w.Body.String()).To(MatchJSON(`{
 			"code": 500,
 			"errno": 999,
 			"error": "Internal Server Error",
-			"message": "doh!"
+			"message": "doh"
 		}`))
 	})
 

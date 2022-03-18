@@ -2,7 +2,7 @@ package config
 
 import "os"
 
-// Env is the source of environment data
+// Env is the source of environment data.
 type Env interface {
 	Get(string) string
 }

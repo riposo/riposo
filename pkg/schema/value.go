@@ -10,6 +10,7 @@ import (
 type Value gjson.Result
 
 // StringValue converts a string literal to a value.
+//nolint:errchkjson
 func StringValue(s string) Value {
 	for i := 0; i < len(s); i++ {
 		if s[i] < ' ' || s[i] > 0x7f || s[i] == '"' || s[i] == '\\' {

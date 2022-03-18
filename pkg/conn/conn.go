@@ -63,7 +63,7 @@ func (s *Set) Perms() permission.Backend { return s.perms }
 // Cache returns the cache backend.
 func (s *Set) Cache() cache.Backend { return s.cache }
 
-// Close closes all connections
+// Close closes all connections.
 func (s *Set) Close() error {
 	return multierr.Combine(
 		s.store.Close(),

@@ -27,7 +27,7 @@ type Backend interface {
 	// Ping returns an error if offline.
 	Ping(context.Context) error
 
-	// Begin starts a new Transation.
+	// Begin starts a new Transaction.
 	Begin(context.Context) (Transaction, error)
 
 	// Close closes the backend.

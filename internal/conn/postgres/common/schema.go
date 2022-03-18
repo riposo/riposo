@@ -21,7 +21,7 @@ func createSchema(ctx context.Context, db *sql.DB, fs embed.FS) error {
 	return nil
 }
 
-func migrateSchema(ctx context.Context, db *sql.DB, current, target int32) error {
+func migrateSchema(_ context.Context, _ *sql.DB, current, target int32) error {
 	if current == target {
 		return nil
 	}

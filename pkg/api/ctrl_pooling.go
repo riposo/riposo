@@ -5,7 +5,6 @@ import (
 
 	"github.com/riposo/riposo/pkg/conn/permission"
 	"github.com/riposo/riposo/pkg/riposo"
-	"github.com/riposo/riposo/pkg/schema"
 )
 
 var stringSlicePool sync.Pool
@@ -25,26 +24,6 @@ func poolStringSlice() *stringSlice {
 
 func (s *stringSlice) Reset()   { s.S = s.S[:0] }
 func (s *stringSlice) Release() { stringSlicePool.Put(s) }
-
-// --------------------------------------------------------------------
-
-var schemaValueSlicePool sync.Pool
-
-type schemaValueSlice struct {
-	S []schema.Value
-}
-
-func poolSchemaValueSlice() *schemaValueSlice {
-	if v := schemaValueSlicePool.Get(); v != nil {
-		s := v.(*schemaValueSlice)
-		s.Reset()
-		return s
-	}
-	return &schemaValueSlice{}
-}
-
-func (s *schemaValueSlice) Reset()   { s.S = s.S[:0] }
-func (s *schemaValueSlice) Release() { schemaValueSlicePool.Put(s) }
 
 // --------------------------------------------------------------------
 

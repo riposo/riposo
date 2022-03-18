@@ -33,9 +33,11 @@ func Parse(query url.Values, maxLimit int) (*Params, error) {
 		case "_sort":
 			pms.Sort = ParseSort(query.Get(key))
 		case "_token":
-			if token, err := ParseToken(query.Get(key)); err != nil {
+			if token, err := ParseToken(query.Get(key)); errors.Is(err, ErrNoToken) {
+				// skip
+			} else if err != nil {
 				return nil, errInvalidToken
-			} else if token != nil {
+			} else {
 				pms.Token = token
 			}
 		case "_before":

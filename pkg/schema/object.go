@@ -92,8 +92,7 @@ func (o *Object) Set(field string, value interface{}) error {
 // DecodeExtra unmarshals extra Extra into a value.
 func (o *Object) DecodeExtra(v interface{}) error {
 	if err := json.Unmarshal(o.Extra, v); err != nil {
-		switch se := err.(type) {
-		case *json.UnmarshalTypeError:
+		if se := new(json.UnmarshalTypeError); errors.As(err, &se) {
 			if se.Field == "" {
 				se.Field = "data"
 			} else {
