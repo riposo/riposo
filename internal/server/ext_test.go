@@ -33,7 +33,7 @@ func NewMux() http.Handler {
 	rts := api.NewRoutes(cfg.APIConfig())
 	rts.Resource("/buckets", nil)
 	rts.Handle("/failure", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		api.Render(w, schema.InternalError(fmt.Errorf("doh!")))
+		api.Render(w, schema.InternalError(fmt.Errorf("doh")))
 	}))
 
 	return newMux(rts, hlp, cns, mockAuth{}, cfg)

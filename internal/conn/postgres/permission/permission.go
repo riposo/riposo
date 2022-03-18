@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"net/url"
 	"strings"
 
@@ -48,39 +49,39 @@ func Connect(ctx context.Context, dsn string) (permission.Backend, error) {
 
 	// Create connection struct, prepare statements.
 	cn := &conn{db: db}
-	if cn.stmt.getUserPrincipals, err = db.PrepareContext(ctx, sqlGetUserPrincipals); err != nil {
+	if err := cn.prepare(ctx); err != nil {
 		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.getACEPrincipals, err = db.PrepareContext(ctx, sqlGetACEPrincipals); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.matchACEPrincipals, err = db.PrepareContext(ctx, sqlMatchACEPrincipals); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.removeUserPrincipal, err = db.PrepareContext(ctx, sqlRemoveUserPrincipal); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.purgeUserPrincipals, err = db.PrepareContext(ctx, sqlPurgeUserPrincipals); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.insertACE, err = db.PrepareContext(ctx, sqlInsertACE); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.deleteACE, err = db.PrepareContext(ctx, sqlDeleteACE); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.getPerms, err = db.PrepareContext(ctx, sqlGetPerms); err != nil {
-		_ = cn.Close()
-		return nil, err
 	}
 	return cn, nil
+}
+
+//nolint:sqlclosecheck
+func (cn *conn) prepare(ctx context.Context) (err error) {
+	if cn.stmt.getUserPrincipals, err = cn.db.PrepareContext(ctx, sqlGetUserPrincipals); err != nil {
+		return
+	}
+	if cn.stmt.getACEPrincipals, err = cn.db.PrepareContext(ctx, sqlGetACEPrincipals); err != nil {
+		return
+	}
+	if cn.stmt.matchACEPrincipals, err = cn.db.PrepareContext(ctx, sqlMatchACEPrincipals); err != nil {
+		return
+	}
+	if cn.stmt.removeUserPrincipal, err = cn.db.PrepareContext(ctx, sqlRemoveUserPrincipal); err != nil {
+		return
+	}
+	if cn.stmt.purgeUserPrincipals, err = cn.db.PrepareContext(ctx, sqlPurgeUserPrincipals); err != nil {
+		return
+	}
+	if cn.stmt.insertACE, err = cn.db.PrepareContext(ctx, sqlInsertACE); err != nil {
+		return
+	}
+	if cn.stmt.deleteACE, err = cn.db.PrepareContext(ctx, sqlDeleteACE); err != nil {
+		return
+	}
+	if cn.stmt.getPerms, err = cn.db.PrepareContext(ctx, sqlGetPerms); err != nil {
+		return
+	}
+	return
 }
 
 // Ping implements permission.Backend interface.
@@ -155,9 +156,10 @@ func (tx *transaction) Flush() error {
 
 // GetUserPrincipals implements permission.Transaction.
 func (tx *transaction) GetUserPrincipals(userID string) ([]string, error) {
-	rows, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.getUserPrincipals).
-		QueryContext(tx.ctx, userID, riposo.Authenticated, riposo.Everyone)
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getUserPrincipals)
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(tx.ctx, userID, riposo.Authenticated, riposo.Everyone)
 	if err != nil {
 		return nil, normErr(err)
 	}
@@ -225,11 +227,15 @@ func (tx *transaction) AddUserPrincipal(principal string, userIDs []string) erro
 
 // RemoveUserPrincipal implements permission.Transaction.
 func (tx *transaction) RemoveUserPrincipal(principal string, userIDs []string) (err error) {
-	if len(userIDs) != 0 {
-		_, err = tx.
-			StmtContext(tx.ctx, tx.cn.stmt.removeUserPrincipal).
-			ExecContext(tx.ctx, principal, pq.Array(userIDs))
+	if len(userIDs) == 0 {
+		return
 	}
+
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.removeUserPrincipal)
+	defer stmt.Close()
+
+	_, err = stmt.
+		ExecContext(tx.ctx, principal, pq.Array(userIDs))
 	return normErr(err)
 }
 
@@ -239,9 +245,10 @@ func (tx *transaction) PurgeUserPrincipals(principals []string) error {
 		return nil
 	}
 
-	_, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.purgeUserPrincipals).
-		ExecContext(tx.ctx, pq.Array(principals))
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.purgeUserPrincipals)
+	defer stmt.Close()
+
+	_, err := stmt.ExecContext(tx.ctx, pq.Array(principals))
 	return normErr(err)
 }
 
@@ -252,22 +259,26 @@ func (tx *transaction) GetACEPrincipals(ent permission.ACE) ([]string, error) {
 		stmt = tx.cn.stmt.matchACEPrincipals
 	}
 	stmt = tx.StmtContext(tx.ctx, stmt)
+	defer stmt.Close()
+
 	return scanStringSlice(stmt.QueryContext(tx.ctx, ent.Path, ent.Perm))
 }
 
 // AddACEPrincipal implements permission.Transaction.
 func (tx *transaction) AddACEPrincipal(principal string, ent permission.ACE) error {
-	_, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.insertACE).
-		ExecContext(tx.ctx, ent.Path, ent.Perm, principal)
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.insertACE)
+	defer stmt.Close()
+
+	_, err := stmt.ExecContext(tx.ctx, ent.Path, ent.Perm, principal)
 	return normErr(err)
 }
 
 // RemoveACEPrincipal implements permission.Transaction.
 func (tx *transaction) RemoveACEPrincipal(principal string, ent permission.ACE) error {
-	_, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.deleteACE).
-		ExecContext(tx.ctx, ent.Path, ent.Perm, principal)
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.deleteACE)
+	defer stmt.Close()
+
+	_, err := stmt.ExecContext(tx.ctx, ent.Path, ent.Perm, principal)
 	return normErr(err)
 }
 
@@ -322,9 +333,10 @@ func (tx *transaction) GetAccessiblePaths(dst []riposo.Path, principals []string
 
 // GetPermissions implements permission.Transaction.
 func (tx *transaction) GetPermissions(path riposo.Path) (schema.PermissionSet, error) {
-	rows, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.getPerms).
-		QueryContext(tx.ctx, path)
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getPerms)
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(tx.ctx, path)
 	if err != nil {
 		return nil, normErr(err)
 	}
@@ -466,7 +478,7 @@ func (tx *transaction) DeletePermissions(paths []riposo.Path) error {
 }
 
 func normErr(err error) error {
-	if err == sql.ErrTxDone {
+	if errors.Is(err, sql.ErrTxDone) {
 		return permission.ErrTxDone
 	}
 	return err

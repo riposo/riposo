@@ -4,6 +4,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -32,7 +33,7 @@ func Parse(r *http.Request, v interface{}) error {
 		body = r.Body
 	}
 
-	if err := json.NewDecoder(body).Decode(v); err != nil && err != io.EOF {
+	if err := json.NewDecoder(body).Decode(v); err != nil && !errors.Is(err, io.EOF) {
 		return schema.BadRequest(err)
 	}
 	return nil

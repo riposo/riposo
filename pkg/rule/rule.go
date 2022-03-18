@@ -33,8 +33,7 @@ func Register(name string, factory Factory) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 
-	_, ok := registry[name]
-	if ok {
+	if _, ok := registry[name]; ok {
 		panic("factory " + name + " is already registered")
 	}
 	registry[name] = factory

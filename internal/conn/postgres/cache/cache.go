@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"net/url"
 	"time"
 
@@ -44,27 +45,8 @@ func Connect(ctx context.Context, dsn string) (cache.Backend, error) {
 
 	// Create connection struct, prepare statements.
 	cn := &conn{db: db}
-	if cn.stmt.getKey, err = db.PrepareContext(ctx, sqlGetKey); err != nil {
+	if err := cn.prepare(ctx); err != nil {
 		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.setKey, err = db.PrepareContext(ctx, sqlSetKey); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.delKey, err = db.PrepareContext(ctx, sqlDelKey); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-	if cn.stmt.prune, err = db.PrepareContext(ctx, sqlPrune); err != nil {
-		_ = cn.Close()
-		return nil, err
-	}
-
-	// Prune expired.
-	if err := cn.pruneExpired(ctx, time.Now()); err != nil {
-		_ = cn.Close()
-		return nil, err
 	}
 
 	// Setup periodic prunning in the background.
@@ -73,6 +55,26 @@ func Connect(ctx context.Context, dsn string) (cache.Backend, error) {
 	go cn.pruneLoop(pruneCtx)
 
 	return cn, nil
+}
+
+//nolint:sqlclosecheck
+func (cn *conn) prepare(ctx context.Context) (err error) {
+	if cn.stmt.getKey, err = cn.db.PrepareContext(ctx, sqlGetKey); err != nil {
+		return
+	}
+	if cn.stmt.setKey, err = cn.db.PrepareContext(ctx, sqlSetKey); err != nil {
+		return
+	}
+	if cn.stmt.delKey, err = cn.db.PrepareContext(ctx, sqlDelKey); err != nil {
+		return
+	}
+	if cn.stmt.prune, err = cn.db.PrepareContext(ctx, sqlPrune); err != nil {
+		return
+	}
+
+	// Prune expired.
+	err = cn.pruneExpired(ctx, time.Now())
+	return
 }
 
 // Ping implements cache.Backend interface.
@@ -159,8 +161,11 @@ func (tx *transaction) Get(key string) ([]byte, error) {
 		return nil, err
 	}
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getKey)
+	defer stmt.Close()
+
 	var val []byte
-	err := tx.StmtContext(tx.ctx, tx.cn.stmt.getKey).
+	err := stmt.
 		QueryRowContext(tx.ctx, key, time.Now().UTC()).
 		Scan(&val)
 	if err = normErr(err); err != nil {
@@ -175,9 +180,10 @@ func (tx *transaction) Set(key string, val []byte, exp time.Time) error {
 		return err
 	}
 
-	_, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.setKey).
-		ExecContext(tx.ctx, key, val, exp.UTC())
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.setKey)
+	defer stmt.Close()
+
+	_, err := stmt.ExecContext(tx.ctx, key, val, exp.UTC())
 	return normErr(err)
 }
 
@@ -187,19 +193,20 @@ func (tx *transaction) Del(key string) error {
 		return err
 	}
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.delKey)
+	defer stmt.Close()
+
 	var s string
-	err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.delKey).
+	err := stmt.
 		QueryRowContext(tx.ctx, key, time.Now().UTC()).
 		Scan(&s)
 	return normErr(err)
 }
 
 func normErr(err error) error {
-	switch err {
-	case sql.ErrTxDone:
+	if errors.Is(err, sql.ErrTxDone) {
 		return cache.ErrTxDone
-	case sql.ErrNoRows:
+	} else if errors.Is(err, sql.ErrNoRows) {
 		return cache.ErrNotFound
 	}
 	return err

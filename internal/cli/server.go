@@ -32,10 +32,10 @@ func (c *serverCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	return exitStatus(c.run(cfg, ctx))
+	return exitStatus(c.run(ctx, cfg))
 }
 
-func (c *serverCmd) run(cfg *config.Config, ctx context.Context) error {
+func (c *serverCmd) run(ctx context.Context, cfg *config.Config) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

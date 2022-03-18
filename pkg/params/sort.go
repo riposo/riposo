@@ -10,10 +10,9 @@ type SortOrder struct {
 
 // ParseSort parses a single sort parameter.
 func ParseSort(value string) (sort []SortOrder) {
-	for min, max := 0, 0; min < len(value); {
-		if pos := strings.IndexByte(value[min:], ','); pos < 0 {
-			max = len(value)
-		} else {
+	for min := 0; min < len(value); {
+		max := len(value)
+		if pos := strings.IndexByte(value[min:], ','); pos > -1 {
 			max = pos + min
 		}
 

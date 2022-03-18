@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -91,7 +92,7 @@ func (p *RequestPart) httpRequest(ctx context.Context, parent http.Header) (*htt
 
 	hr, err := http.NewRequestWithContext(ctx, p.Method, p.Path, bytes.NewReader(p.Body))
 	if err != nil {
-		if _, ok := err.(*url.Error); ok {
+		if uerr := new(url.Error); errors.As(err, &uerr) {
 			return nil, fmt.Errorf("invalid path %q", p.Path)
 		}
 		return nil, err

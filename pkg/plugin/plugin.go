@@ -25,7 +25,7 @@ type Plugin interface {
 }
 
 type (
-	// InitFunc initalises a plugin on boot.
+	// InitFunc initialises a plugin on boot.
 	InitFunc func(context.Context, *api.Routes, riposo.Helpers) error
 	// CloseFunc closes a plugin on shutdown.
 	CloseFunc func() error
@@ -39,12 +39,12 @@ type simple struct {
 }
 
 // New inits a simple plugin.
-func New(id string, meta map[string]interface{}, init InitFunc, close CloseFunc) Plugin {
+func New(id string, meta map[string]interface{}, initFn InitFunc, closeFn CloseFunc) Plugin {
 	return &simple{
 		id:    id,
 		meta:  meta,
-		init:  init,
-		close: close,
+		init:  initFn,
+		close: closeFn,
 	}
 }
 

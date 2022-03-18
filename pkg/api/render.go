@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/riposo/riposo/internal/bufferpool"
@@ -34,8 +35,8 @@ func Render(w http.ResponseWriter, v interface{}) {
 
 // renderError responds with an error.
 func renderError(w http.ResponseWriter, err error) {
-	resp, ok := err.(*schema.Error)
-	if !ok {
+	resp := new(schema.Error)
+	if !errors.As(err, &resp) {
 		resp = schema.InternalError(err)
 	}
 

@@ -54,7 +54,7 @@ func compare(v1, v2 schema.Value) int {
 	}
 }
 
-func isEqual(v1, v2 schema.Value, strictNULL bool) bool {
+func isEqual(v1, v2 schema.Value) bool {
 	if v1.Type != v2.Type {
 		return false
 	}
@@ -63,7 +63,7 @@ func isEqual(v1, v2 schema.Value, strictNULL bool) bool {
 	case gjson.Number:
 		return v1.Num == v2.Num
 	case gjson.Null:
-		return !strictNULL || v1.Raw == v2.Raw
+		return true
 	default:
 		return v1.Raw == v2.Raw
 	}
@@ -101,19 +101,19 @@ func match(o *schema.Object, f params.Filter) bool {
 	case params.OperatorMAX:
 		return compare(val, f.Value(0)) < 1
 	case params.OperatorEQ:
-		return isEqual(val, f.Value(0), false)
+		return isEqual(val, f.Value(0))
 	case params.OperatorNOT:
-		return !isEqual(val, f.Value(0), false)
+		return !isEqual(val, f.Value(0))
 	case params.OperatorIN:
 		for i := range f.Values {
-			if isEqual(val, f.Value(i), false) {
+			if isEqual(val, f.Value(i)) {
 				return true
 			}
 		}
 		return false
 	case params.OperatorEXCLUDE:
 		for i := range f.Values {
-			if isEqual(val, f.Value(i), false) {
+			if isEqual(val, f.Value(i)) {
 				return false
 			}
 		}

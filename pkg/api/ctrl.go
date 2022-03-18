@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -36,10 +37,7 @@ func (c *controller) List(out http.Header, r *http.Request) interface{} {
 	req := newRequest(r)
 
 	// run through common part
-	svs := poolSchemaValueSlice()
-	defer svs.Release()
-
-	params, err := c.prepareBulkGet(out, req, svs)
+	params, err := c.prepareBulkGet(out, req)
 	if err != nil {
 		return err
 	}
@@ -62,10 +60,7 @@ func (c *controller) Count(out http.Header, r *http.Request) interface{} {
 	req := newRequest(r)
 
 	// run through common part
-	svs := poolSchemaValueSlice()
-	defer svs.Release()
-
-	params, err := c.prepareBulkGet(out, req, svs)
+	params, err := c.prepareBulkGet(out, req)
 	if err != nil {
 		return err
 	}
@@ -94,10 +89,7 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 	}
 
 	// parse params
-	svs := poolSchemaValueSlice()
-	defer svs.Release()
-
-	params, err := c.parseBulkQuery(req, svs)
+	params, err := c.parseBulkQuery(req)
 	if err != nil {
 		return err
 	}
@@ -108,7 +100,7 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 			return schema.InvalidQuery("_token has invalid content")
 		}
 
-		if err := req.Txn.Cache.Del(params.Token.Nonce); err == cache.ErrNotFound {
+		if err := req.Txn.Cache.Del(params.Token.Nonce); errors.Is(err, cache.ErrNotFound) {
 			return schema.InvalidQuery("_token was already used or has expired")
 		} else if err != nil {
 			return err
@@ -205,7 +197,7 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 
 	// fetch existing, ignore not-found errors
 	hs, err := req.Txn.Store.GetForUpdate(req.Path)
-	if err != nil && err != storage.ErrNotFound {
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
 
@@ -285,7 +277,7 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 
 	// fetch existing
 	hs, err := req.Txn.Store.GetForUpdate(req.Path)
-	if err == storage.ErrNotFound {
+	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
 		return err
@@ -329,7 +321,7 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 
 	// fetch existing
 	hs, err := req.Txn.Store.GetForUpdate(req.Path)
-	if err == storage.ErrNotFound {
+	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
 		return err
@@ -428,7 +420,7 @@ func (c *controller) paginate(out http.Header, req *request, params *params.Para
 	return objs, nil
 }
 
-func (c *controller) prepareBulkGet(out http.Header, req *request, svs *schemaValueSlice) (*params.Params, error) {
+func (c *controller) prepareBulkGet(out http.Header, req *request) (*params.Params, error) {
 	// obtain modTime
 	modTime, err := req.Txn.Store.ModTime(req.Path)
 	if err != nil {
@@ -453,7 +445,7 @@ func (c *controller) prepareBulkGet(out http.Header, req *request, svs *schemaVa
 	}
 
 	// parse params
-	params, err := c.parseBulkQuery(req, svs)
+	params, err := c.parseBulkQuery(req)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +453,7 @@ func (c *controller) prepareBulkGet(out http.Header, req *request, svs *schemaVa
 	return params, nil
 }
 
-func (c *controller) parseBulkQuery(req *request, svs *schemaValueSlice) (*params.Params, error) {
+func (c *controller) parseBulkQuery(req *request) (*params.Params, error) {
 	// parse payload
 	if err := req.HTTP.ParseForm(); err != nil {
 		return nil, schema.InvalidQuery(err.Error())
@@ -535,7 +527,7 @@ func (c *controller) doGet(out http.Header, req *request) interface{} {
 
 	// get resource
 	exst, err := c.act.Get(req.Txn, req.Path)
-	if err == storage.ErrNotFound {
+	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
 		return err
@@ -572,7 +564,7 @@ func (c *controller) createOrGet(out http.Header, req *request, payload *schema.
 
 	// create resource, try 'get' if exists
 	err := c.act.Create(req.Txn, req.Path, payload)
-	if err == storage.ErrObjectExists && payload.Data.ID != "" {
+	if errors.Is(err, storage.ErrObjectExists) && payload.Data.ID != "" {
 		req.Path = req.Path.WithObjectID(payload.Data.ID)
 		return c.doGet(out, req)
 	} else if err != nil {

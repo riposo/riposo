@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"net/url"
 
 	"github.com/riposo/riposo/internal/conn/postgres/common"
@@ -69,6 +70,7 @@ func Connect(ctx context.Context, dsn string, hlp riposo.Helpers) (storage.Backe
 	return cn, nil
 }
 
+//nolint:sqlclosecheck
 func (cn *conn) prepare(ctx context.Context) (err error) {
 	// create connection struct, prepare statements.
 	if cn.stmt.getModTime, err = cn.db.PrepareContext(ctx, sqlGetModTime); err != nil {
@@ -182,9 +184,11 @@ func (tx *transaction) ModTime(path riposo.Path) (riposo.Epoch, error) {
 
 	ns, _ := path.Split()
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getModTime)
+	defer stmt.Close()
+
 	var modTime riposo.Epoch
-	if err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.getModTime).
+	if err := stmt.
 		QueryRowContext(tx.ctx, ns).
 		Scan(&modTime); err != nil && err != sql.ErrNoRows {
 		return 0, normErr(err)
@@ -200,9 +204,11 @@ func (tx *transaction) Exists(path riposo.Path) (bool, error) {
 
 	ns, objID := path.Split()
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.existsObject)
+	defer stmt.Close()
+
 	var ok bool
-	err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.existsObject).
+	err := stmt.
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&ok)
 	if err == sql.ErrNoRows {
@@ -219,9 +225,11 @@ func (tx *transaction) Get(path riposo.Path) (*schema.Object, error) {
 
 	ns, objID := path.Split()
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getObject)
+	defer stmt.Close()
+
 	var obj schema.Object
-	err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.getObject).
+	err := stmt.
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&obj.ModTime, &obj.Extra)
 	if err != nil {
@@ -240,9 +248,11 @@ func (tx *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, err
 
 	ns, objID := path.Split()
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getObjectForUpdate)
+	defer stmt.Close()
+
 	var obj schema.Object
-	err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.getObjectForUpdate).
+	err := stmt.
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&obj.ModTime, &obj.Extra)
 	if err != nil {
@@ -274,9 +284,11 @@ func (tx *transaction) Create(path riposo.Path, obj *schema.Object) error {
 		obj.Extra = append(obj.Extra, '{', '}')
 	}
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.createObject)
+	defer stmt.Close()
+
 	var modTime riposo.Epoch
-	if err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.createObject).
+	if err := stmt.
 		QueryRowContext(tx.ctx, ns, obj.ID, obj.Extra).
 		Scan(&modTime); err != nil {
 		return normErr(err)
@@ -295,9 +307,11 @@ func (tx *transaction) Update(h storage.UpdateHandle) error {
 
 	ns, objID := uh.path.Split()
 
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.updateObject)
+	defer stmt.Close()
+
 	var modTime riposo.Epoch
-	if err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.updateObject).
+	if err := stmt.
 		QueryRowContext(tx.ctx, ns, objID, uh.obj.Extra).
 		Scan(&modTime); err != nil {
 		return normErr(err)
@@ -318,15 +332,20 @@ func (tx *transaction) Delete(path riposo.Path) (*schema.Object, error) {
 		ID:      objID,
 		Deleted: true,
 	}
-	if err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.deleteObject).
+
+	stmt1 := tx.StmtContext(tx.ctx, tx.cn.stmt.deleteObject)
+	defer stmt1.Close()
+
+	if err := stmt1.
 		QueryRowContext(tx.ctx, ns, objID).
 		Scan(&obj.ModTime, &obj.Extra); err != nil {
 		return nil, normErr(err)
 	}
 
-	if _, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.deleteObjectNested).
+	stmt2 := tx.StmtContext(tx.ctx, tx.cn.stmt.deleteObjectNested)
+	defer stmt2.Close()
+
+	if _, err := stmt2.
 		ExecContext(tx.ctx, string(path)+"/%"); err != nil {
 		return nil, normErr(err)
 	}
@@ -486,9 +505,10 @@ func (tx *transaction) DeleteAll(paths []riposo.Path) (riposo.Epoch, []riposo.Pa
 
 // Purge implements storage.Transaction interface.
 func (tx *transaction) Purge(olderThan riposo.Epoch) (int64, error) {
-	res, err := tx.
-		StmtContext(tx.ctx, tx.cn.stmt.purgeObjects).
-		ExecContext(tx.ctx, olderThan.IsZero(), olderThan)
+	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.purgeObjects)
+	defer stmt.Close()
+
+	res, err := stmt.ExecContext(tx.ctx, olderThan.IsZero(), olderThan)
 	if err != nil {
 		return 0, normErr(err)
 	}
@@ -496,10 +516,9 @@ func (tx *transaction) Purge(olderThan riposo.Epoch) (int64, error) {
 }
 
 func normErr(err error) error {
-	switch err {
-	case sql.ErrTxDone:
+	if errors.Is(err, sql.ErrTxDone) {
 		return storage.ErrTxDone
-	case sql.ErrNoRows:
+	} else if errors.Is(err, sql.ErrNoRows) {
 		return storage.ErrNotFound
 	}
 	return err
