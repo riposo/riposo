@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/riposo/riposo/pkg/api"
-	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/mock"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
@@ -48,33 +47,33 @@ var _ = Describe("Group Model", func() {
 	})
 
 	Describe("Update", func() {
-		var hs storage.UpdateHandle
+		var exst *schema.Object
 
 		BeforeEach(func() {
 			obj := &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			hs, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("does not require members", func() {
-			Expect(subject.Update(txn, hs, &schema.Resource{
+			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{}`)},
 			})).To(Succeed())
-			Expect(hs.Object().Extra).To(MatchJSON(`{"members":[]}`))
+			Expect(exst.Extra).To(MatchJSON(`{"members":[]}`))
 		})
 
 		It("normalizes", func() {
-			Expect(subject.Update(txn, hs, &schema.Resource{
+			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["claire","alice","","alice"]}`)},
 			})).To(Succeed())
-			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
+			Expect(exst.Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Update(txn, hs, &schema.Resource{
+			Expect(subject.Update(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["alice","claire"]}`)},
 			})).To(Succeed())
 			Expect(txn.Perms.GetUserPrincipals("alice")).To(ContainElement("/buckets/foo/groups/EPR.ID"))
@@ -84,33 +83,33 @@ var _ = Describe("Group Model", func() {
 	})
 
 	Describe("Patch", func() {
-		var hs storage.UpdateHandle
+		var exst *schema.Object
 
 		BeforeEach(func() {
 			obj := &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			hs, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("allows to remain unchanged", func() {
-			Expect(subject.Patch(txn, hs, &schema.Resource{
+			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{}`)},
 			})).To(Succeed())
-			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","bob"]}`))
+			Expect(exst.Extra).To(MatchJSON(`{"members":["alice","bob"]}`))
 		})
 
 		It("normalizes", func() {
-			Expect(subject.Patch(txn, hs, &schema.Resource{
+			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["claire","alice",null,"alice"]}`)},
 			})).To(Succeed())
-			Expect(hs.Object().Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
+			Expect(exst.Extra).To(MatchJSON(`{"members":["alice","claire"]}`))
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Patch(txn, hs, &schema.Resource{
+			Expect(subject.Patch(txn, "/buckets/foo/groups/EPR.ID", exst, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"members":["alice","claire"]}`)},
 			})).To(Succeed())
 			Expect(txn.Perms.GetUserPrincipals("alice")).To(ContainElement("/buckets/foo/groups/EPR.ID"))
@@ -120,28 +119,29 @@ var _ = Describe("Group Model", func() {
 	})
 
 	Describe("Delete", func() {
-		var hs storage.UpdateHandle
+		var exst *schema.Object
 
 		BeforeEach(func() {
 			obj := &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			hs, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("updates principals", func() {
-			Expect(subject.Delete(txn, hs)).To(BeAssignableToTypeOf(&schema.Object{}))
+			Expect(subject.Delete(txn, "/buckets/foo/groups/EPR.ID", exst)).To(BeAssignableToTypeOf(&schema.Object{}))
 			Expect(txn.Perms.GetUserPrincipals("alice")).NotTo(ContainElement("/buckets/foo/groups/EPR.ID"))
 			Expect(txn.Perms.GetUserPrincipals("bob")).NotTo(ContainElement("/buckets/foo/groups/EPR.ID"))
 		})
 	})
 
 	Describe("DeleteAll", func() {
+		var o1, o2 *schema.Object
 		BeforeEach(func() {
-			o1 := &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
-			o2 := &schema.Object{Extra: []byte(`{"members":["alice"]}`)}
+			o1 = &schema.Object{Extra: []byte(`{"members":["alice","bob"]}`)}
+			o2 = &schema.Object{Extra: []byte(`{"members":["alice"]}`)}
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: o1})).To(Succeed())
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: o2})).To(Succeed())
 		})
@@ -155,10 +155,7 @@ var _ = Describe("Group Model", func() {
 				"system.Everyone",
 			))
 
-			modTime, deleted, err := subject.DeleteAll(txn, "/buckets/foo/groups/*", []string{
-				"EPR.ID",
-				"ITR.ID",
-			})
+			modTime, deleted, err := subject.DeleteAll(txn, "/buckets/foo/groups/*", []*schema.Object{o1, o2})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(modTime).To(Equal(riposo.Epoch(1515151515680)))
 			Expect(deleted).To(HaveLen(2))

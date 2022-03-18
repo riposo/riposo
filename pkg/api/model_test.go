@@ -72,44 +72,44 @@ var _ = Describe("Model", func() {
 	})
 
 	Describe("Update", func() {
-		var hs storage.UpdateHandle
+		var obj *schema.Object
 
 		BeforeEach(func() {
 			Expect(subject.Create(txn, "/objects/*", resource())).To(Succeed())
 
 			var err error
-			hs, err = txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err = txn.Store.GetForUpdate("/objects/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("updates without permissions", func() {
-			Expect(subject.Update(txn, hs, &schema.Resource{
+			Expect(subject.Update(txn, "/objects/EPR.ID", obj, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"updated":true}`)},
 			})).To(Succeed())
 
-			Expect(hs.Object()).To(Equal(&schema.Object{
+			Expect(obj).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"updated":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
+			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice"},
 			}))
 		})
 
 		It("updates with permissions", func() {
-			Expect(subject.Update(txn, hs, &schema.Resource{
+			Expect(subject.Update(txn, "/objects/EPR.ID", obj, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"updated":true}`)},
 				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
 
-			Expect(hs.Object()).To(Equal(&schema.Object{
+			Expect(obj).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"updated":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
+			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice", "claire"},
 				"read":  {"bob"},
@@ -118,7 +118,7 @@ var _ = Describe("Model", func() {
 	})
 
 	Describe("Patch", func() {
-		var hs storage.UpdateHandle
+		var obj *schema.Object
 
 		BeforeEach(func() {
 			payload := resource()
@@ -126,38 +126,38 @@ var _ = Describe("Model", func() {
 			Expect(subject.Create(txn, "/objects/*", payload)).To(Succeed())
 
 			var err error
-			hs, err = txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err = txn.Store.GetForUpdate("/objects/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("patches without permissions", func() {
-			Expect(subject.Patch(txn, hs, &schema.Resource{
+			Expect(subject.Patch(txn, "/objects/EPR.ID", obj, &schema.Resource{
 				Data: &schema.Object{Extra: []byte(`{"b":4,"c":3}`)},
 			})).To(Succeed())
 
-			Expect(hs.Object()).To(Equal(&schema.Object{
+			Expect(obj).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"a":1,"b":4,"c":3}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
+			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice"},
 			}))
 		})
 
 		It("patches with permissions", func() {
-			Expect(subject.Patch(txn, hs, &schema.Resource{
+			Expect(subject.Patch(txn, "/objects/EPR.ID", obj, &schema.Resource{
 				Data:        &schema.Object{Extra: []byte(`{"b":4,"c":3}`)},
 				Permissions: schema.PermissionSet{"write": {"claire"}, "read": {"bob"}},
 			})).To(Succeed())
 
-			Expect(hs.Object()).To(Equal(&schema.Object{
+			Expect(obj).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"a":1,"b":4,"c":3}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(hs.Object()))
+			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice", "claire"},
 				"read":  {"bob"},
@@ -177,12 +177,12 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes the object", func() {
-			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(hs.Object()).NotTo(BeNil())
+			Expect(obj).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
 
-			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
+			Expect(subject.Delete(txn, "/objects/EPR.ID", obj)).To(Equal(&schema.Object{
 				ID:      "EPR.ID",
 				ModTime: 1515151515678,
 				Deleted: true,
@@ -195,12 +195,12 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes nested", func() {
-			hs, err := txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
+			obj, err := txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(hs.Object()).NotTo(BeNil())
+			Expect(obj).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/ITR.ID")).To(HaveLen(1))
 
-			Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
+			Expect(subject.Delete(txn, "/objects/EPR.ID/nested/ITR.ID", obj)).To(Equal(&schema.Object{
 				ID:      "ITR.ID",
 				ModTime: 1515151515678,
 				Deleted: true,
@@ -235,10 +235,14 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes objects with nested", func() {
-			Expect(txn.Store.Get("/objects/EPR.ID")).NotTo(BeNil())
+			o1, err := txn.Store.Get("/objects/EPR.ID")
+			Expect(err).NotTo(HaveOccurred())
 			Expect(txn.Store.Get("/objects/EPR.ID/nested/Q3R.ID")).NotTo(BeNil())
-			Expect(txn.Store.Get("/objects/ITR.ID")).NotTo(BeNil())
+
+			o2, err := txn.Store.Get("/objects/ITR.ID")
+			Expect(err).NotTo(HaveOccurred())
 			Expect(txn.Store.Get("/objects/ITR.ID/nested/U7R.ID")).NotTo(BeNil())
+
 			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
 			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID")).NotTo(BeNil())
 
@@ -249,10 +253,10 @@ var _ = Describe("Model", func() {
 			Expect(txn.Perms.GetPermissions("/objects/MXR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/MXR.ID/nested/ZDR.ID")).To(HaveLen(1))
 
-			modTime, deleted, err := subject.DeleteAll(txn, "/objects/*", []string{
-				"EPR.ID",
-				"BADID",
-				"ITR.ID",
+			modTime, deleted, err := subject.DeleteAll(txn, "/objects/*", []*schema.Object{
+				o1,
+				{ID: "BADID"},
+				o2,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(modTime).To(Equal(riposo.Epoch(1515151515681)))

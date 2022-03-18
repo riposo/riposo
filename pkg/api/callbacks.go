@@ -45,7 +45,7 @@ type DeleteCallback interface {
 
 // DeleteAllCallback instances run around delete-all actions.
 type DeleteAllCallback interface {
-	BeforeDeleteAll(objIDs []string) error
+	BeforeDeleteAll(objs []*schema.Object) error
 	AfterDeleteAll(modTime riposo.Epoch, deleted []riposo.Path) error
 }
 

@@ -1271,7 +1271,7 @@ func (m *mockCallbacks) AfterDelete(deleted *schema.Object) error {
 	m.Calls = append(m.Calls, "AfterDelete")
 	return nil
 }
-func (m *mockCallbacks) BeforeDeleteAll(objIDs []string) error {
+func (m *mockCallbacks) BeforeDeleteAll(obj []*schema.Object) error {
 	m.Calls = append(m.Calls, "BeforeDeleteAll")
 	return nil
 }

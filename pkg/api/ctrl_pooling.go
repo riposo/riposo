@@ -7,26 +7,6 @@ import (
 	"github.com/riposo/riposo/pkg/riposo"
 )
 
-var stringSlicePool sync.Pool
-
-type stringSlice struct {
-	S []string
-}
-
-func poolStringSlice() *stringSlice {
-	if v := stringSlicePool.Get(); v != nil {
-		s := v.(*stringSlice)
-		s.Reset()
-		return s
-	}
-	return &stringSlice{S: make([]string, 0, 26)}
-}
-
-func (s *stringSlice) Reset()   { s.S = s.S[:0] }
-func (s *stringSlice) Release() { stringSlicePool.Put(s) }
-
-// --------------------------------------------------------------------
-
 var entSlicePool sync.Pool
 
 type entSlice struct {

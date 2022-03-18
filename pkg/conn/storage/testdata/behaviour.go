@@ -74,22 +74,28 @@ func BehavesLikeBackend(link *LikeBackend) {
 	})
 
 	Ψ.It("is transactional", func() {
+		// create EPR.ID, create ITR.ID
 		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
 		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
 
-		h1, err := tx.GetForUpdate("/objects/EPR.ID")
+		// update EPR.ID, delete ITR.ID
+		o1, err := tx.GetForUpdate("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		h1.Object().Extra = []byte(`{"meta":true}`)
-		Ω.Expect(tx.Update(h1)).To(Ω.Succeed())
+		o1.Extra = []byte(`{"meta":true}`)
+		Ω.Expect(tx.Update("/objects/EPR.ID", o1)).To(Ω.Succeed())
 		Ω.Expect(tx.Delete("/objects/ITR.ID")).To(Ω.BeAssignableToTypeOf(&schema.Object{}))
 
-		o1, err := tx.Get("/objects/EPR.ID")
+		// get EPR.ID, get ITR.ID
+		o2, err := tx.Get("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(o1.ID).To(Ω.Equal("EPR.ID"))
+		Ω.Expect(o2.ID).To(Ω.Equal("EPR.ID"))
 		_, err = tx.Get("/objects/ITR.ID")
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
+
+		// rollback
 		Ω.Expect(tx.Rollback()).To(Ω.Succeed())
 
+		// try with other transaction
 		tx2, err := subject.Begin(ctx)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		defer tx2.Rollback()
@@ -171,11 +177,10 @@ func BehavesLikeBackend(link *LikeBackend) {
 		o1 := &schema.Object{}
 		Ω.Expect(tx.Create("/objects/*", o1)).To(Ω.Succeed())
 
-		h, err := tx.GetForUpdate("/objects/EPR.ID")
+		o2, err := tx.GetForUpdate("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(h.Path()).To(Ω.Equal(riposo.Path("/objects/EPR.ID")))
-		Ω.Expect(h.Object().ID).To(Ω.Equal(o1.ID))
-		Ω.Expect(h.Object()).NotTo(Ω.BeIdenticalTo(o1))
+		Ω.Expect(o2.ID).To(Ω.Equal("EPR.ID"))
+		Ω.Expect(o2).NotTo(Ω.BeIdenticalTo(o1))
 
 		// reject node paths
 		_, err = tx.GetForUpdate("/objects/*")
@@ -259,24 +264,24 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Create("/objects/*", obj)).To(Ω.Succeed())
 
 		// update
-		h1, err := tx.GetForUpdate("/objects/EPR.ID")
+		o1, err := tx.GetForUpdate("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(tx.Update(h1)).To(Ω.Succeed())
-		Ω.Expect(NumEntries()).To(Ω.Equal(1))
-
-		o1, err := tx.Get("/objects/EPR.ID")
-		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(o1.ModTime).To(Ω.BeNumerically(">", obj.ModTime))
-
-		// always increment timestamps
-		h2, err := tx.GetForUpdate("/objects/EPR.ID")
-		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(tx.Update(h2)).To(Ω.Succeed())
+		Ω.Expect(tx.Update("/objects/EPR.ID", o1)).To(Ω.Succeed())
 		Ω.Expect(NumEntries()).To(Ω.Equal(1))
 
 		o2, err := tx.Get("/objects/EPR.ID")
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
-		Ω.Expect(o2.ModTime).To(Ω.BeNumerically(">", o1.ModTime))
+		Ω.Expect(o2.ModTime).To(Ω.BeNumerically(">", obj.ModTime))
+
+		// always increment timestamps
+		o3, err := tx.GetForUpdate("/objects/EPR.ID")
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(tx.Update("/objects/EPR.ID", o3)).To(Ω.Succeed())
+		Ω.Expect(NumEntries()).To(Ω.Equal(1))
+
+		o4, err := tx.Get("/objects/EPR.ID")
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(o4.ModTime).To(Ω.BeNumerically(">", o2.ModTime))
 	})
 
 	Ψ.It("deletes individual objects", func() {

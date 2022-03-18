@@ -27,16 +27,6 @@ func init() {
 
 // --------------------------------------------------------------------
 
-type updateHandle struct {
-	obj  *schema.Object
-	path riposo.Path
-}
-
-func (h *updateHandle) Object() *schema.Object { return h.obj }
-func (h *updateHandle) Path() riposo.Path      { return h.path }
-
-// --------------------------------------------------------------------
-
 type conn struct {
 	db   *sql.DB
 	hlp  riposo.Helpers
@@ -241,7 +231,7 @@ func (tx *transaction) Get(path riposo.Path) (*schema.Object, error) {
 }
 
 // GetForUpdate implements storage.Transaction interface.
-func (tx *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, error) {
+func (tx *transaction) GetForUpdate(path riposo.Path) (*schema.Object, error) {
 	if path.IsNode() {
 		return nil, storage.ErrInvalidPath
 	}
@@ -260,7 +250,7 @@ func (tx *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, err
 	}
 
 	obj.ID = path.ObjectID()
-	return &updateHandle{obj: &obj, path: path}, nil
+	return &obj, nil
 }
 
 // Create implements storage.Transaction interface.
@@ -299,25 +289,24 @@ func (tx *transaction) Create(path riposo.Path, obj *schema.Object) error {
 }
 
 // Update implements storage.Transaction interface.
-func (tx *transaction) Update(h storage.UpdateHandle) error {
-	uh := h.(*updateHandle)
-	if len(uh.obj.Extra) == 0 {
-		uh.obj.Extra = append(uh.obj.Extra, '{', '}')
+func (tx *transaction) Update(path riposo.Path, obj *schema.Object) error {
+	if len(obj.Extra) == 0 {
+		obj.Extra = append(obj.Extra, '{', '}')
 	}
 
-	ns, objID := uh.path.Split()
+	ns, objID := path.Split()
 
 	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.updateObject)
 	defer stmt.Close()
 
 	var modTime riposo.Epoch
 	if err := stmt.
-		QueryRowContext(tx.ctx, ns, objID, uh.obj.Extra).
+		QueryRowContext(tx.ctx, ns, objID, obj.Extra).
 		Scan(&modTime); err != nil {
 		return normErr(err)
 	}
 
-	uh.obj.ModTime = modTime
+	obj.ModTime = modTime
 	return nil
 }
 

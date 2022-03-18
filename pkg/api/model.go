@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
 )
@@ -13,13 +12,13 @@ type Model interface {
 	// Create creates a single resource.
 	Create(txn *Txn, path riposo.Path, payload *schema.Resource) error
 	// Update updates a resource.
-	Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error
+	Update(txn *Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error
 	// Patch patches a resource.
-	Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error
+	Patch(txn *Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error
 	// Delete deletes a resource.
-	Delete(txn *Txn, hs storage.UpdateHandle) (*schema.Object, error)
+	Delete(txn *Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error)
 	// DeleteAll deletes resources.
-	DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error)
+	DeleteAll(txn *Txn, path riposo.Path, objs []*schema.Object) (riposo.Epoch, []riposo.Path, error)
 }
 
 // DefaultModel is an embeddable default model type.
@@ -60,35 +59,35 @@ func (DefaultModel) Create(txn *Txn, path riposo.Path, payload *schema.Resource)
 	return txn.Perms.CreatePermissions(path.WithObjectID(payload.Data.ID), payload.Permissions)
 }
 
-func (DefaultModel) Update(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Update(txn *Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error {
 	// update existing object with received data
-	hs.Object().Update(payload.Data)
-	return update(txn, hs, payload.Permissions)
+	exst.Update(payload.Data)
+	return update(txn, path, exst, payload.Permissions)
 }
 
-func (DefaultModel) Patch(txn *Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (DefaultModel) Patch(txn *Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error {
 	// patch existing object with received data
-	if err := hs.Object().Patch(payload.Data); err != nil {
+	if err := exst.Patch(payload.Data); err != nil {
 		return err
 	}
-	return update(txn, hs, payload.Permissions)
+	return update(txn, path, exst, payload.Permissions)
 }
 
-func (DefaultModel) Delete(txn *Txn, hs storage.UpdateHandle) (*schema.Object, error) {
+func (DefaultModel) Delete(txn *Txn, path riposo.Path, _ *schema.Object) (*schema.Object, error) {
 	// delete permissions
-	if err := txn.Perms.DeletePermissions([]riposo.Path{hs.Path()}); err != nil {
+	if err := txn.Perms.DeletePermissions([]riposo.Path{path}); err != nil {
 		return nil, err
 	}
 
 	// delete object
-	return txn.Store.Delete(hs.Path())
+	return txn.Store.Delete(path)
 }
 
-func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
+func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objs []*schema.Object) (riposo.Epoch, []riposo.Path, error) {
 	// collect paths
-	paths := make([]riposo.Path, 0, len(objIDs))
-	for _, objID := range objIDs {
-		paths = append(paths, path.WithObjectID(objID))
+	paths := make([]riposo.Path, 0, len(objs))
+	for _, obj := range objs {
+		paths = append(paths, path.WithObjectID(obj.ID))
 	}
 
 	// delete permissions
@@ -100,12 +99,10 @@ func (DefaultModel) DeleteAll(txn *Txn, path riposo.Path, objIDs []string) (ripo
 	return txn.Store.DeleteAll(paths)
 }
 
-func update(txn *Txn, hs storage.UpdateHandle, ps schema.PermissionSet) error {
+func update(txn *Txn, path riposo.Path, exst *schema.Object, ps schema.PermissionSet) error {
 	// update object
-	if hs != nil {
-		if err := txn.Store.Update(hs); err != nil {
-			return err
-		}
+	if err := txn.Store.Update(path, exst); err != nil {
+		return err
 	}
 
 	// update permissions
@@ -114,7 +111,7 @@ func update(txn *Txn, hs storage.UpdateHandle, ps schema.PermissionSet) error {
 		if user := txn.User; user != nil && user.ID != riposo.Everyone {
 			ps.Add("write", user.ID)
 		}
-		if err := txn.Perms.MergePermissions(hs.Path(), ps); err != nil {
+		if err := txn.Perms.MergePermissions(path, ps); err != nil {
 			return err
 		}
 	}

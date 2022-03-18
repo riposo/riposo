@@ -118,16 +118,8 @@ func (c *controller) DeleteBulk(out http.Header, r *http.Request) interface{} {
 		return err
 	}
 
-	// init pooled slice
-	objIDs := poolStringSlice()
-	defer objIDs.Release()
-
-	for _, obj := range objs {
-		objIDs.S = append(objIDs.S, obj.ID)
-	}
-
 	// perform action
-	modTime, err := c.act.DeleteAll(req.Txn, req.Path, objIDs.S)
+	modTime, err := c.act.DeleteAll(req.Txn, req.Path, objs)
 	if err != nil {
 		return err
 	}
@@ -196,13 +188,13 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing, ignore not-found errors
-	hs, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.GetForUpdate(req.Path)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
 
 	// render create if record doesn't exist
-	if hs == nil {
+	if exst == nil {
 		req.Path = req.Path.WithObjectID("*")
 		return c.createOrGet(out, req, &payload)
 	}
@@ -218,15 +210,14 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	}
 
 	// perform conditional render check if exists
-	if hs != nil {
-		exst := hs.Object()
+	if exst != nil {
 		if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 			return err
 		}
 	}
 
 	// update resource & permissions
-	res, err := c.act.Update(req.Txn, hs, &payload)
+	res, err := c.act.Update(req.Txn, req.Path, exst, &payload)
 	if err != nil {
 		return err
 	}
@@ -276,7 +267,7 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing
-	hs, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.GetForUpdate(req.Path)
 	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
@@ -284,13 +275,12 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	}
 
 	// conditional render check
-	exst := hs.Object()
 	if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 		return err
 	}
 
 	// patch resource & permissions
-	res, err := c.act.Patch(req.Txn, hs, &payload)
+	res, err := c.act.Patch(req.Txn, req.Path, exst, &payload)
 	if err != nil {
 		return err
 	}
@@ -320,7 +310,7 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing
-	hs, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.GetForUpdate(req.Path)
 	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
@@ -328,13 +318,12 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// conditional render check
-	exst := hs.Object()
 	if err := renderConditional(out, req.HTTP, exst.ModTime, exst); err != nil {
 		return err
 	}
 
 	// delete resource
-	deleted, err := c.act.Delete(req.Txn, hs)
+	deleted, err := c.act.Delete(req.Txn, req.Path, exst)
 	if err != nil {
 		return err
 	}
