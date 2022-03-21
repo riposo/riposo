@@ -91,6 +91,8 @@ func (o *Object) Set(field string, value interface{}) error {
 
 // DecodeExtra unmarshals extra Extra into a value.
 func (o *Object) DecodeExtra(v interface{}) error {
+	o.Norm()
+
 	if err := json.Unmarshal(o.Extra, v); err != nil {
 		if se := new(json.UnmarshalTypeError); errors.As(err, &se) {
 			if se.Field == "" {
@@ -208,12 +210,15 @@ func (o *Object) Update(x *Object) {
 	}
 	if len(x.Extra) != 0 {
 		o.Extra = append(o.Extra[:0], x.Extra...)
+	} else {
+		o.Norm()
 	}
 }
 
 // Patch merges attributes of x into o.
 func (o *Object) Patch(x *Object) error {
 	if len(x.Extra) < 3 {
+		o.Norm()
 		return nil
 	}
 
@@ -231,6 +236,13 @@ func (o *Object) Patch(x *Object) error {
 		recPatch(m1, m2)
 	}
 	return o.EncodeExtra(m1)
+}
+
+// Norm normalises the object.
+func (o *Object) Norm() {
+	if len(o.Extra) == 0 {
+		o.Extra = append(o.Extra, '{', '}')
+	}
 }
 
 // String implements Stringer interface.

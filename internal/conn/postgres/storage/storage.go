@@ -269,10 +269,7 @@ func (tx *transaction) Create(path riposo.Path, obj *schema.Object) error {
 	} else {
 		obj.ID = tx.cn.hlp.NextID()
 	}
-
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
+	obj.Norm()
 
 	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.createObject)
 	defer stmt.Close()
@@ -290,10 +287,7 @@ func (tx *transaction) Create(path riposo.Path, obj *schema.Object) error {
 
 // Update implements storage.Transaction interface.
 func (tx *transaction) Update(path riposo.Path, obj *schema.Object) error {
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
-
+	obj.Norm()
 	ns, objID := path.Split()
 
 	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.updateObject)

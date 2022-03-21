@@ -228,10 +228,7 @@ func (t *transaction) Create(path riposo.Path, obj *schema.Object) error {
 		obj.ID = t.b.hlp.NextID()
 	}
 
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
-
+	obj.Norm()
 	t.b.dead.Unlink(ns, obj.ID)
 	t.b.tree.FetchNode(ns, 0).Put(obj, now)
 	return nil
@@ -247,10 +244,7 @@ func (t *transaction) Update(path riposo.Path, obj *schema.Object) error {
 	ns, _ := path.Split()
 	t.backup(ns)
 
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
-
+	obj.Norm()
 	t.b.dead.Unlink(ns, obj.ID)
 	t.b.tree.FetchNode(ns, 0).Put(obj, now)
 	return nil

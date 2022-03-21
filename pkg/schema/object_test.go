@@ -106,13 +106,17 @@ var _ = Describe("Object", func() {
 
 		o2.Extra = append(o2.Extra[:6], '2', '}')
 		Expect(subject.Extra).To(MatchJSON(`{"a": 1}`))
+
+		o3 := &Object{}
+		o3.Update(&Object{})
+		Expect(o3.Extra).To(MatchJSON(`{}`))
 	})
 
 	It("patches objects", func() {
 		o1 := &Object{}
 		o2 := &Object{}
 		Expect(o1.Patch(o2)).To(Succeed())
-		Expect(o1.Extra).To(BeNil())
+		Expect(o1.Extra).To(MatchJSON(`{}`))
 
 		o2 = &Object{Extra: []byte(`{
 			"a": "ok",
@@ -149,6 +153,12 @@ var _ = Describe("Object", func() {
 		o2 = &Object{Extra: []byte(`{"a": null}`)}
 		Expect(o1.Patch(o2)).To(Succeed())
 		Expect(o1.Extra).To(MatchJSON(`{"a": true}`))
+	})
+
+	It("norms", func() {
+		subject.Extra = nil
+		subject.Norm()
+		Expect(subject.Extra).To(MatchJSON(`{}`))
 	})
 
 	DescribeTable("calculates size",
