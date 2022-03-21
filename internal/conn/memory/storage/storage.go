@@ -187,7 +187,7 @@ func (t *transaction) Exists(path riposo.Path) (bool, error) {
 }
 
 // Get implements Transaction interface.
-func (t *transaction) Get(path riposo.Path) (*schema.Object, error) {
+func (t *transaction) Get(path riposo.Path, _ bool) (*schema.Object, error) {
 	if path.IsNode() {
 		return nil, storage.ErrInvalidPath
 	}
@@ -202,9 +202,19 @@ func (t *transaction) Get(path riposo.Path) (*schema.Object, error) {
 	return copyObject(obj), nil
 }
 
-// GetForUpdate implements Transaction interface.
-func (t *transaction) GetForUpdate(path riposo.Path) (*schema.Object, error) {
-	return t.Get(path)
+// GetBatch implements Transaction interface.
+func (t *transaction) GetBatch(paths []riposo.Path, lock bool) ([]*schema.Object, error) {
+	objs := make([]*schema.Object, len(paths))
+	for i, path := range paths {
+		obj, err := t.Get(path, lock)
+		if err == storage.ErrNotFound {
+			continue
+		} else if err != nil {
+			return nil, err
+		}
+		objs[i] = obj
+	}
+	return objs, nil
 }
 
 // Create implements Transaction interface.

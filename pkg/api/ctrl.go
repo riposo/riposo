@@ -188,7 +188,7 @@ func (c *controller) Update(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing, ignore not-found errors
-	exst, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.Get(req.Path, true)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
@@ -267,7 +267,7 @@ func (c *controller) Patch(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing
-	exst, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.Get(req.Path, true)
 	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {
@@ -310,7 +310,7 @@ func (c *controller) Delete(out http.Header, r *http.Request) interface{} {
 	}
 
 	// fetch existing
-	exst, err := req.Txn.Store.GetForUpdate(req.Path)
+	exst, err := req.Txn.Store.Get(req.Path, true)
 	if errors.Is(err, storage.ErrNotFound) {
 		return schema.InvalidResource(req.Path)
 	} else if err != nil {

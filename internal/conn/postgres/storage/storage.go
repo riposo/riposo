@@ -208,16 +208,20 @@ func (tx *transaction) Exists(path riposo.Path) (bool, error) {
 }
 
 // Get implements storage.Transaction interface.
-func (tx *transaction) Get(path riposo.Path) (*schema.Object, error) {
+func (tx *transaction) Get(path riposo.Path, lock bool) (*schema.Object, error) {
 	if path.IsNode() {
 		return nil, storage.ErrInvalidPath
 	}
 
-	ns, objID := path.Split()
+	base := tx.cn.stmt.getObject
+	if lock {
+		base = tx.cn.stmt.getObjectForUpdate
+	}
 
-	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getObject)
+	stmt := tx.StmtContext(tx.ctx, base)
 	defer stmt.Close()
 
+	ns, objID := path.Split()
 	var obj schema.Object
 	err := stmt.
 		QueryRowContext(tx.ctx, ns, objID).
@@ -230,27 +234,63 @@ func (tx *transaction) Get(path riposo.Path) (*schema.Object, error) {
 	return &obj, nil
 }
 
-// GetForUpdate implements storage.Transaction interface.
-func (tx *transaction) GetForUpdate(path riposo.Path) (*schema.Object, error) {
-	if path.IsNode() {
-		return nil, storage.ErrInvalidPath
+// GetBatch implements storage.Transaction interface.
+func (tx *transaction) GetBatch(paths []riposo.Path, lock bool) ([]*schema.Object, error) {
+	if len(paths) == 0 {
+		return nil, nil
 	}
 
-	ns, objID := path.Split()
+	for _, path := range paths {
+		if path.IsNode() {
+			return nil, storage.ErrInvalidPath
+		}
+	}
 
-	stmt := tx.StmtContext(tx.ctx, tx.cn.stmt.getObjectForUpdate)
-	defer stmt.Close()
+	stmt := newQueryBuilder()
+	defer stmt.Release()
 
-	var obj schema.Object
-	err := stmt.
-		QueryRowContext(tx.ctx, ns, objID).
-		Scan(&obj.ModTime, &obj.Extra)
+	stmt.AppendString(`SELECT path, id, last_modified, data FROM storage_objects WHERE NOT deleted AND (path, id) IN (`)
+	for i, path := range paths {
+		if i != 0 {
+			stmt.AppendString(`, `)
+		}
+
+		ns, objID := path.Split()
+		stmt.AppendByte('(')
+		stmt.AppendValue(ns)
+		stmt.AppendByte(',')
+		stmt.AppendValue(objID)
+		stmt.AppendByte(')')
+	}
+	stmt.AppendByte(')')
+
+	if lock {
+		stmt.AppendString(" FOR UPDATE")
+	}
+
+	rows, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
 		return nil, normErr(err)
 	}
+	defer rows.Close()
 
-	obj.ID = path.ObjectID()
-	return &obj, nil
+	objs := make([]*schema.Object, len(paths))
+	for rows.Next() {
+		var namespace string
+		obj := new(schema.Object)
+		if err := rows.Scan(&namespace, &obj.ID, &obj.ModTime, &obj.Extra); err != nil {
+			return nil, err
+		}
+
+		for i, path := range paths {
+			if ns, objID := path.Split(); ns == namespace && objID == obj.ID {
+				objs[i] = obj
+				break
+			}
+		}
+	}
+
+	return objs, rows.Err()
 }
 
 // Create implements storage.Transaction interface.

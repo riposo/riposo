@@ -48,7 +48,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515677,
 				Extra:   []byte(`{"meta":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{"write": {"alice"}}))
 		})
 
@@ -63,7 +63,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515677,
 				Extra:   []byte(`{"meta":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice", "claire"},
 				"read":  {"bob"},
@@ -78,7 +78,7 @@ var _ = Describe("Model", func() {
 			Expect(subject.Create(txn, "/objects/*", resource())).To(Succeed())
 
 			var err error
-			obj, err = txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err = txn.Store.Get("/objects/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -92,7 +92,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"updated":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice"},
 			}))
@@ -109,7 +109,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"updated":true}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice", "claire"},
 				"read":  {"bob"},
@@ -126,7 +126,7 @@ var _ = Describe("Model", func() {
 			Expect(subject.Create(txn, "/objects/*", payload)).To(Succeed())
 
 			var err error
-			obj, err = txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err = txn.Store.Get("/objects/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -140,7 +140,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"a":1,"b":4,"c":3}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice"},
 			}))
@@ -157,7 +157,7 @@ var _ = Describe("Model", func() {
 				ModTime: 1515151515678,
 				Extra:   []byte(`{"a":1,"b":4,"c":3}`),
 			}))
-			Expect(txn.Store.Get("/objects/EPR.ID")).To(Equal(obj))
+			Expect(txn.Store.Get("/objects/EPR.ID", false)).To(Equal(obj))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(Equal(schema.PermissionSet{
 				"write": {"alice", "claire"},
 				"read":  {"bob"},
@@ -177,7 +177,7 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes the object", func() {
-			obj, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+			obj, err := txn.Store.Get("/objects/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
@@ -189,13 +189,13 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"meta":true}`),
 			}))
 
-			_, err = txn.Store.Get("/objects/EPR.ID")
+			_, err = txn.Store.Get("/objects/EPR.ID", false)
 			Expect(err).To(MatchError(storage.ErrNotFound))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(BeEmpty())
 		})
 
 		It("deletes nested", func() {
-			obj, err := txn.Store.GetForUpdate("/objects/EPR.ID/nested/ITR.ID")
+			obj, err := txn.Store.Get("/objects/EPR.ID/nested/ITR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).NotTo(BeNil())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/ITR.ID")).To(HaveLen(1))
@@ -207,7 +207,7 @@ var _ = Describe("Model", func() {
 				Extra:   []byte(`{"meta":true}`),
 			}))
 
-			_, err = txn.Store.Get("/objects/EPR.ID/nested/ITR.ID")
+			_, err = txn.Store.Get("/objects/EPR.ID/nested/ITR.ID", false)
 			Expect(err).To(MatchError(storage.ErrNotFound))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/ITR.ID")).To(BeEmpty())
 		})
@@ -235,16 +235,16 @@ var _ = Describe("Model", func() {
 		})
 
 		It("deletes objects with nested", func() {
-			o1, err := txn.Store.Get("/objects/EPR.ID")
+			o1, err := txn.Store.Get("/objects/EPR.ID", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(txn.Store.Get("/objects/EPR.ID/nested/Q3R.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/EPR.ID/nested/Q3R.ID", false)).NotTo(BeNil())
 
-			o2, err := txn.Store.Get("/objects/ITR.ID")
+			o2, err := txn.Store.Get("/objects/ITR.ID", false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(txn.Store.Get("/objects/ITR.ID/nested/U7R.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/ITR.ID/nested/U7R.ID", false)).NotTo(BeNil())
 
-			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
-			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/MXR.ID", false)).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID", false)).NotTo(BeNil())
 
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(HaveLen(1))
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/Q3R.ID")).To(HaveLen(1))
@@ -267,8 +267,8 @@ var _ = Describe("Model", func() {
 				"/objects/ITR.ID/nested/U7R.ID",
 			}))
 
-			Expect(txn.Store.Get("/objects/MXR.ID")).NotTo(BeNil())
-			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID")).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/MXR.ID", false)).NotTo(BeNil())
+			Expect(txn.Store.Get("/objects/MXR.ID/nested/ZDR.ID", false)).NotTo(BeNil())
 
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID")).To(BeEmpty())
 			Expect(txn.Perms.GetPermissions("/objects/EPR.ID/nested/Q3R.ID")).To(BeEmpty())

@@ -65,9 +65,10 @@ type Transaction interface {
 	Exists(path riposo.Path) (bool, error)
 	// Get returns a stored object. May return ErrNotFound.
 	// Accepts elementary paths only.
-	Get(path riposo.Path) (*schema.Object, error)
-	// GetForUpdate returns a stored object with a lock. May return ErrNotFound.
-	GetForUpdate(path riposo.Path) (*schema.Object, error)
+	Get(path riposo.Path, lock bool) (*schema.Object, error)
+	// GetBatch returns a batch of stored objects.
+	// Accepts elementary paths only.
+	GetBatch(paths []riposo.Path, lock bool) ([]*schema.Object, error)
 
 	// Create stores a new object under a path.
 	Create(path riposo.Path, obj *schema.Object) error
