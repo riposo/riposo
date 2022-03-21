@@ -44,7 +44,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
-          ./build.sh --plugins accounts@0206258,flush@647b897 --source ../ -o ../riposo
+          ./build.sh --plugins accounts@7a93231,flush@7caf66c --source ../ -o ../riposo
       - name: Start server
         run: |
           ./riposo server &
