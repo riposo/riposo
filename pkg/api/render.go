@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/riposo/riposo/internal/bufferpool"
+	"github.com/riposo/riposo/pkg/bufferpool"
 	"github.com/riposo/riposo/pkg/schema"
 )
 
