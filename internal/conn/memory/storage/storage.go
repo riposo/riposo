@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"sort"
 	"strings"
@@ -207,7 +208,7 @@ func (t *transaction) GetBatch(paths []riposo.Path, lock bool) ([]*schema.Object
 	objs := make([]*schema.Object, len(paths))
 	for i, path := range paths {
 		obj, err := t.Get(path, lock)
-		if err == storage.ErrNotFound {
+		if errors.Is(err, storage.ErrNotFound) {
 			continue
 		} else if err != nil {
 			return nil, err
