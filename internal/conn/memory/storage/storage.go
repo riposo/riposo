@@ -19,14 +19,6 @@ func init() {
 	})
 }
 
-type updateHandle struct {
-	obj  *schema.Object
-	path riposo.Path
-}
-
-func (t *updateHandle) Object() *schema.Object { return t.obj }
-func (t *updateHandle) Path() riposo.Path      { return t.path }
-
 type backend struct {
 	cc   clock.Clock
 	hlp  riposo.Helpers
@@ -211,12 +203,8 @@ func (t *transaction) Get(path riposo.Path) (*schema.Object, error) {
 }
 
 // GetForUpdate implements Transaction interface.
-func (t *transaction) GetForUpdate(path riposo.Path) (storage.UpdateHandle, error) {
-	obj, err := t.Get(path)
-	if err != nil {
-		return nil, err
-	}
-	return &updateHandle{obj: obj, path: path}, nil
+func (t *transaction) GetForUpdate(path riposo.Path) (*schema.Object, error) {
+	return t.Get(path)
 }
 
 // Create implements Transaction interface.
@@ -240,32 +228,25 @@ func (t *transaction) Create(path riposo.Path, obj *schema.Object) error {
 		obj.ID = t.b.hlp.NextID()
 	}
 
-	if len(obj.Extra) == 0 {
-		obj.Extra = append(obj.Extra, '{', '}')
-	}
-
+	obj.Norm()
 	t.b.dead.Unlink(ns, obj.ID)
 	t.b.tree.FetchNode(ns, 0).Put(obj, now)
 	return nil
 }
 
 // Update implements Transaction interface.
-func (t *transaction) Update(h storage.UpdateHandle) error {
+func (t *transaction) Update(path riposo.Path, obj *schema.Object) error {
 	if t.done {
 		return storage.ErrTxDone
 	}
 
-	uh := h.(*updateHandle)
 	now := riposo.EpochFromTime(t.b.cc.Now())
-	ns, _ := uh.path.Split()
+	ns, _ := path.Split()
 	t.backup(ns)
 
-	if len(uh.obj.Extra) == 0 {
-		uh.obj.Extra = append(uh.obj.Extra, '{', '}')
-	}
-
-	t.b.dead.Unlink(ns, uh.obj.ID)
-	t.b.tree.FetchNode(ns, 0).Put(uh.obj, now)
+	obj.Norm()
+	t.b.dead.Unlink(ns, obj.ID)
+	t.b.tree.FetchNode(ns, 0).Put(obj, now)
 	return nil
 }
 

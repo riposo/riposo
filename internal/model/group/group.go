@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/riposo/riposo/pkg/api"
-	"github.com/riposo/riposo/pkg/conn/storage"
 	"github.com/riposo/riposo/pkg/riposo"
 	"github.com/riposo/riposo/pkg/schema"
 )
@@ -37,7 +36,7 @@ func (m Model) Create(txn *api.Txn, path riposo.Path, payload *schema.Resource) 
 }
 
 // Update overrides.
-func (m Model) Update(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Update(txn *api.Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error {
 	// normalize payload
 	extra, err := normGroup(payload.Data, true)
 	if err != nil {
@@ -45,13 +44,13 @@ func (m Model) Update(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Res
 	}
 
 	// purge principal
-	principal := hs.Path().String()
+	principal := path.String()
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.DefaultModel.Update(txn, hs, payload); err != nil {
+	if err := m.DefaultModel.Update(txn, path, exst, payload); err != nil {
 		return err
 	}
 
@@ -64,7 +63,7 @@ func (m Model) Update(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Res
 }
 
 // Patch overrides.
-func (m Model) Patch(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Resource) error {
+func (m Model) Patch(txn *api.Txn, path riposo.Path, exst *schema.Object, payload *schema.Resource) error {
 	// normalize payload
 	_, err := normGroup(payload.Data, false)
 	if err != nil {
@@ -72,18 +71,18 @@ func (m Model) Patch(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Reso
 	}
 
 	// purge principal
-	principal := hs.Path().String()
+	principal := path.String()
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
 		return err
 	}
 
 	// perform action
-	if err := m.DefaultModel.Patch(txn, hs, payload); err != nil {
+	if err := m.DefaultModel.Patch(txn, path, exst, payload); err != nil {
 		return err
 	}
 
 	// parse merged result
-	extra, err := parseGroup(hs.Object())
+	extra, err := parseGroup(exst)
 	if err != nil {
 		return err
 	}
@@ -97,8 +96,8 @@ func (m Model) Patch(txn *api.Txn, hs storage.UpdateHandle, payload *schema.Reso
 }
 
 // Delete overrides.
-func (m Model) Delete(txn *api.Txn, hs storage.UpdateHandle) (*schema.Object, error) {
-	principal := hs.Path().String()
+func (m Model) Delete(txn *api.Txn, path riposo.Path, exst *schema.Object) (*schema.Object, error) {
+	principal := path.String()
 
 	// purge principal
 	if err := purgePrincipals(txn, []string{principal}); err != nil {
@@ -106,16 +105,16 @@ func (m Model) Delete(txn *api.Txn, hs storage.UpdateHandle) (*schema.Object, er
 	}
 
 	// perform action
-	return m.DefaultModel.Delete(txn, hs)
+	return m.DefaultModel.Delete(txn, path, exst)
 }
 
 // DeleteAll deletes resources in bulk.
-func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (riposo.Epoch, []riposo.Path, error) {
-	if len(objIDs) != 0 {
+func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objs []*schema.Object) (riposo.Epoch, []riposo.Path, error) {
+	if len(objs) != 0 {
 		// purge principals
-		principals := make([]string, 0, len(objIDs))
-		for _, objID := range objIDs {
-			principals = append(principals, path.WithObjectID(objID).String())
+		principals := make([]string, 0, len(objs))
+		for _, obj := range objs {
+			principals = append(principals, path.WithObjectID(obj.ID).String())
 		}
 		if err := purgePrincipals(txn, principals); err != nil {
 			return 0, nil, err
@@ -123,7 +122,7 @@ func (m Model) DeleteAll(txn *api.Txn, path riposo.Path, objIDs []string) (ripos
 	}
 
 	// perform action
-	return m.DefaultModel.DeleteAll(txn, path, objIDs)
+	return m.DefaultModel.DeleteAll(txn, path, objs)
 }
 
 func addPrincipal(txn *api.Txn, principal string, userIDs []string) error {

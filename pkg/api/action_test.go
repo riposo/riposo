@@ -57,10 +57,10 @@ var _ = Describe("Actions", func() {
 	})
 
 	It("updates with callbacks", func() {
-		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+		exst, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(subject.Update(txn, hs, &schema.Resource{
+		Expect(subject.Update(txn, "/objects/EPR.ID", exst, &schema.Resource{
 			Data: &schema.Object{Extra: []byte(`{"updated":true}`)},
 		})).To(Equal(&schema.Resource{
 			Data: &schema.Object{
@@ -75,10 +75,10 @@ var _ = Describe("Actions", func() {
 	})
 
 	It("patches with callbacks", func() {
-		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+		exst, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(subject.Patch(txn, hs, &schema.Resource{
+		Expect(subject.Patch(txn, "/objects/EPR.ID", exst, &schema.Resource{
 			Data: &schema.Object{Extra: []byte(`{"patched":true}`)},
 		})).To(Equal(&schema.Resource{
 			Data: &schema.Object{
@@ -93,10 +93,10 @@ var _ = Describe("Actions", func() {
 	})
 
 	It("deletes with callbacks", func() {
-		hs, err := txn.Store.GetForUpdate("/objects/EPR.ID")
+		exst, err := txn.Store.GetForUpdate("/objects/EPR.ID")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(subject.Delete(txn, hs)).To(Equal(&schema.Object{
+		Expect(subject.Delete(txn, "/objects/EPR.ID", exst)).To(Equal(&schema.Object{
 			ID:      "EPR.ID",
 			ModTime: 1515151515678,
 			Deleted: true,
@@ -107,7 +107,10 @@ var _ = Describe("Actions", func() {
 	})
 
 	It("deletes all with callbacks", func() {
-		Expect(subject.DeleteAll(txn, "/objects/*", []string{"EPR.ID"})).To(Equal(riposo.Epoch(1515151515678)))
+		obj, err := txn.Store.Get("/objects/EPR.ID")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(subject.DeleteAll(txn, "/objects/*", []*schema.Object{obj})).To(Equal(riposo.Epoch(1515151515678)))
 		Expect(cbs.Calls).To(Equal([]string{"BeforeDeleteAll", "AfterDeleteAll"}))
 		Expect(cbs.Paths).To(Equal([]string{"/objects/*"}))
 	})

@@ -50,12 +50,12 @@ type Transaction interface {
 	// Purge purges all deleted objects olderThan epoch.
 	Purge(olderThan riposo.Epoch) (int64, error)
 
-	// ModTime returns the maximum epoch of the given node.
+	// ModTime returns the maximum epoch of the given path.
 	ModTime(path riposo.Path) (riposo.Epoch, error)
-	// ListAll appends matching objects within a node and returns the resulting slice.
-	ListAll(objs []*schema.Object, node riposo.Path, opt ListOptions) ([]*schema.Object, error)
-	// CountAll counts all matching objects within a node and returns the resulting number.
-	CountAll(node riposo.Path, opt CountOptions) (int64, error)
+	// ListAll appends matching objects within a path and returns the resulting slice.
+	ListAll(objs []*schema.Object, path riposo.Path, opt ListOptions) ([]*schema.Object, error)
+	// CountAll counts all matching objects within a path and returns the resulting number.
+	CountAll(path riposo.Path, opt CountOptions) (int64, error)
 	// DeleteAll recursively deletes given paths and returns the
 	// maximum modTime and paths of the deleted objects.
 	DeleteAll(paths []riposo.Path) (riposo.Epoch, []riposo.Path, error)
@@ -67,22 +67,14 @@ type Transaction interface {
 	// Accepts elementary paths only.
 	Get(path riposo.Path) (*schema.Object, error)
 	// GetForUpdate returns a stored object with a lock. May return ErrNotFound.
-	GetForUpdate(path riposo.Path) (UpdateHandle, error)
+	GetForUpdate(path riposo.Path) (*schema.Object, error)
 
-	// Create stores a new object under a node.
-	Create(node riposo.Path, obj *schema.Object) error
+	// Create stores a new object under a path.
+	Create(path riposo.Path, obj *schema.Object) error
 	// Update updates an existing object.
-	Update(h UpdateHandle) error
-	// Delete deletes the given path and returns the affected object.
+	Update(path riposo.Path, obj *schema.Object) error
+	// Delete deletes an existing path and returns the affected object.
 	Delete(path riposo.Path) (*schema.Object, error)
-}
-
-// UpdateHandle is an update handle.
-type UpdateHandle interface {
-	// Object returns the transactional object.
-	Object() *schema.Object
-	// Path returns the resource path.
-	Path() riposo.Path
 }
 
 var (
