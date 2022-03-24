@@ -20,6 +20,8 @@
 - Allow to define custom rules ([#24](https://github.com/riposo/riposo/pull/24))
 - Make in-memory stores transactional
   ([#37](https://github.com/riposo/riposo/pull/37))
+- Support batch storage operations
+  ([#45](https://github.com/riposo/riposo/pull/45))
 
 # 0.1.0 (2021-03-26)
 
