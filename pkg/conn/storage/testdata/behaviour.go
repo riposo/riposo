@@ -28,7 +28,7 @@ type LikeBackend struct {
 	SkipFilters []params.Operator
 }
 
-// BehavesLikeBackend contains common store behaviour
+// BehavesLikeBackend contains common store behaviour.
 func BehavesLikeBackend(link *LikeBackend) {
 	var subject storage.Backend
 	var tx storage.Transaction
@@ -79,17 +79,17 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
 
 		// update EPR.ID, delete ITR.ID
-		o1, err := tx.GetForUpdate("/objects/EPR.ID")
+		o1, err := tx.Get("/objects/EPR.ID", true)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		o1.Extra = []byte(`{"meta":true}`)
 		Ω.Expect(tx.Update("/objects/EPR.ID", o1)).To(Ω.Succeed())
 		Ω.Expect(tx.Delete("/objects/ITR.ID")).To(Ω.BeAssignableToTypeOf(&schema.Object{}))
 
 		// get EPR.ID, get ITR.ID
-		o2, err := tx.Get("/objects/EPR.ID")
+		o2, err := tx.Get("/objects/EPR.ID", false)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(o2.ID).To(Ω.Equal("EPR.ID"))
-		_, err = tx.Get("/objects/ITR.ID")
+		_, err = tx.Get("/objects/ITR.ID", false)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
 
 		// rollback
@@ -100,9 +100,9 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		defer tx2.Rollback()
 
-		_, err = tx2.Get("/objects/EPR.ID")
+		_, err = tx2.Get("/objects/EPR.ID", false)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
-		_, err = tx2.Get("/objects/ITR.ID")
+		_, err = tx2.Get("/objects/ITR.ID", false)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
 	})
 
@@ -149,7 +149,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Exists("/objects/missing")).To(Ω.BeFalse())
 
 		// reject node paths
-		_, err := tx.Get("/objects/*")
+		_, err := tx.Exists("/objects/*")
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
 	})
 
@@ -157,7 +157,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		o1 := &schema.Object{}
 		Ω.Expect(tx.Create("/objects/*", o1)).To(Ω.Succeed())
 
-		o2, err := tx.Get("/objects/EPR.ID")
+		o2, err := tx.Get("/objects/EPR.ID", false)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(o2.ID).To(Ω.Equal(o1.ID))
 		Ω.Expect(o2.ModTime).To(Ω.Equal(o1.ModTime))
@@ -165,30 +165,60 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(o2).NotTo(Ω.BeIdenticalTo(o1))
 
 		// reject node paths
-		_, err = tx.Get("/objects/*")
+		_, err = tx.Get("/objects/*", false)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
 
 		// handle not-found
-		_, err = tx.Get("/objects/missing-id")
+		_, err = tx.Get("/objects/missing-id", false)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
 	})
 
-	Ψ.It("gets objects for update", func() {
+	Ψ.It("gets objects with lock", func() {
 		o1 := &schema.Object{}
 		Ω.Expect(tx.Create("/objects/*", o1)).To(Ω.Succeed())
 
-		o2, err := tx.GetForUpdate("/objects/EPR.ID")
+		o2, err := tx.Get("/objects/EPR.ID", true)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(o2.ID).To(Ω.Equal("EPR.ID"))
 		Ω.Expect(o2).NotTo(Ω.BeIdenticalTo(o1))
 
 		// reject node paths
-		_, err = tx.GetForUpdate("/objects/*")
+		_, err = tx.Get("/objects/*", true)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
 
 		// handle not-found
-		_, err = tx.GetForUpdate("/objects/missing-id")
+		_, err = tx.Get("/objects/missing-id", true)
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrNotFound))
+	})
+
+	Ψ.It("gets objects in batches", func() {
+		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
+		Ω.Expect(tx.Create("/objects/*", &schema.Object{})).To(Ω.Succeed())
+
+		objs, err := tx.GetBatch([]riposo.Path{
+			"/objects/EPR.ID",
+			"/objects/missing-id",
+			"/objects/ITR.ID",
+		}, false)
+		Ω.Expect(err).NotTo(Ω.HaveOccurred())
+		Ω.Expect(objs).To(Ω.HaveLen(3))
+		Ω.Expect(objs[0].ID).To(Ω.Equal("EPR.ID"))
+		Ω.Expect(objs[1]).To(Ω.BeNil())
+		Ω.Expect(objs[2].ID).To(Ω.Equal("ITR.ID"))
+
+		// reject node paths
+		_, err = tx.GetBatch([]riposo.Path{
+			"/objects/EPR.ID",
+			"/objects/*",
+		}, false)
+		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
+
+		// allow locking
+		Ω.Expect(tx.GetBatch([]riposo.Path{
+			"/objects/EPR.ID",
+			"/objects/missing-id",
+			"/objects/ITR.ID",
+		}, true)).To(Ω.HaveLen(3))
 	})
 
 	Ψ.It("creates objects", func() {
@@ -245,7 +275,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		defer tx2.Rollback()
 
-		objs, err := tx2.ListAll(nil, "/objects/*", storage.ListOptions{})
+		objs, err := tx2.ListAll("/objects/*", storage.ListOptions{})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(objs).To(Ω.HaveLen(100))
 
@@ -264,22 +294,22 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Create("/objects/*", obj)).To(Ω.Succeed())
 
 		// update
-		o1, err := tx.GetForUpdate("/objects/EPR.ID")
+		o1, err := tx.Get("/objects/EPR.ID", true)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(tx.Update("/objects/EPR.ID", o1)).To(Ω.Succeed())
 		Ω.Expect(NumEntries()).To(Ω.Equal(1))
 
-		o2, err := tx.Get("/objects/EPR.ID")
+		o2, err := tx.Get("/objects/EPR.ID", false)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(o2.ModTime).To(Ω.BeNumerically(">", obj.ModTime))
 
 		// always increment timestamps
-		o3, err := tx.GetForUpdate("/objects/EPR.ID")
+		o3, err := tx.Get("/objects/EPR.ID", true)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(tx.Update("/objects/EPR.ID", o3)).To(Ω.Succeed())
 		Ω.Expect(NumEntries()).To(Ω.Equal(1))
 
-		o4, err := tx.Get("/objects/EPR.ID")
+		o4, err := tx.Get("/objects/EPR.ID", false)
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(o4.ModTime).To(Ω.BeNumerically(">", o2.ModTime))
 	})
@@ -328,7 +358,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.ModTime("/objects/EPR.ID/nested/*")).To(Ω.BeNumerically(">=", d1.ModTime))
 
 		// retain deleted records
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{
 			Include: storage.IncludeAll,
 		})).To(Ω.And(
 			Ω.HaveLen(3),
@@ -367,20 +397,20 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Create("/others/*", &schema.Object{})).To(Ω.Succeed())
 
 		// only accept node paths
-		_, err := tx.ListAll(nil, "/objects/foo", storage.ListOptions{})
+		_, err := tx.ListAll("/objects/foo", storage.ListOptions{})
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
 
 		// exact
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{})).To(Ω.HaveLen(2))
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
-		Ω.Expect(tx.ListAll(nil, "/parents/x/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
-		Ω.Expect(tx.ListAll(nil, "/parents/a/unknowns/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{})).To(Ω.HaveLen(2))
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/x/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/a/unknowns/*", storage.ListOptions{})).To(Ω.BeEmpty())
 
 		// limit
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{Limit: 1})).To(Ω.HaveLen(1))
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{Limit: 1})).To(Ω.HaveLen(1))
 
 		// conditions
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{Condition: params.Condition{
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{Condition: params.Condition{
 			params.ParseFilter("has_x", "true"),
 		}})).To(Ω.HaveLen(1))
 	})
@@ -456,7 +486,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.ModTime("/objects/*")).To(Ω.Equal(modTime2))
 
 		// retain deleted records
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{
 			Include: storage.IncludeAll,
 		})).To(Ω.And(
 			Ω.HaveLen(4),

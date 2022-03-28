@@ -31,7 +31,7 @@ func (basic) Authenticate(r *http.Request) (*api.User, error) {
 
 	// retrieve account from store
 	txn := api.GetTxn(r)
-	obj, err := txn.Store.Get(riposo.Path("/accounts/" + user))
+	obj, err := txn.Store.Get(riposo.Path("/accounts/"+user), false)
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, Errorf("unknown user account")
 	} else if err != nil {

@@ -54,7 +54,7 @@ var _ = Describe("Group Model", func() {
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.Get("/buckets/foo/groups/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -90,7 +90,7 @@ var _ = Describe("Group Model", func() {
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.Get("/buckets/foo/groups/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -126,7 +126,7 @@ var _ = Describe("Group Model", func() {
 			Expect(subject.Create(txn, "/buckets/foo/groups/*", &schema.Resource{Data: obj})).To(Succeed())
 
 			var err error
-			exst, err = txn.Store.GetForUpdate("/buckets/foo/groups/EPR.ID")
+			exst, err = txn.Store.Get("/buckets/foo/groups/EPR.ID", true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

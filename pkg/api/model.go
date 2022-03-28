@@ -26,7 +26,7 @@ type DefaultModel struct{}
 
 func (DefaultModel) Get(txn *Txn, path riposo.Path) (*schema.Resource, error) {
 	// find the object
-	obj, err := txn.Store.Get(path)
+	obj, err := txn.Store.Get(path, false)
 	if err != nil {
 		return nil, err
 	}

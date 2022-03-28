@@ -52,8 +52,8 @@ type Transaction interface {
 
 	// ModTime returns the maximum epoch of the given path.
 	ModTime(path riposo.Path) (riposo.Epoch, error)
-	// ListAll appends matching objects within a path and returns the resulting slice.
-	ListAll(objs []*schema.Object, path riposo.Path, opt ListOptions) ([]*schema.Object, error)
+	// ListAll returns matching objects within a path.
+	ListAll(path riposo.Path, opt ListOptions) ([]*schema.Object, error)
 	// CountAll counts all matching objects within a path and returns the resulting number.
 	CountAll(path riposo.Path, opt CountOptions) (int64, error)
 	// DeleteAll recursively deletes given paths and returns the
@@ -65,9 +65,10 @@ type Transaction interface {
 	Exists(path riposo.Path) (bool, error)
 	// Get returns a stored object. May return ErrNotFound.
 	// Accepts elementary paths only.
-	Get(path riposo.Path) (*schema.Object, error)
-	// GetForUpdate returns a stored object with a lock. May return ErrNotFound.
-	GetForUpdate(path riposo.Path) (*schema.Object, error)
+	Get(path riposo.Path, lock bool) (*schema.Object, error)
+	// GetBatch appends a batch of stored objects to the resulting slice.
+	// Accepts elementary paths only.
+	GetBatch(paths []riposo.Path, lock bool) ([]*schema.Object, error)
 
 	// Create stores a new object under a path.
 	Create(path riposo.Path, obj *schema.Object) error
