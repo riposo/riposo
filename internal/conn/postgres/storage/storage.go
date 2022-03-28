@@ -400,9 +400,9 @@ func (tx *transaction) CountAll(path riposo.Path, opt storage.CountOptions) (int
 }
 
 // ListAll implements storage.Transaction interface.
-func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
+func (tx *transaction) ListAll(path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
 	if !path.IsNode() {
-		return objs, storage.ErrInvalidPath
+		return nil, storage.ErrInvalidPath
 	}
 
 	stmt := newQueryBuilder()
@@ -420,10 +420,11 @@ func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stor
 
 	rows, err := stmt.QueryContext(tx.ctx, tx)
 	if err != nil {
-		return objs, normErr(err)
+		return nil, normErr(err)
 	}
 	defer rows.Close()
 
+	var objs []*schema.Object
 	for rows.Next() {
 		var obj schema.Object
 		if err := rows.Scan(&obj.ID, &obj.ModTime, &obj.Deleted, &obj.Extra); err != nil {
@@ -431,8 +432,11 @@ func (tx *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stor
 		}
 		objs = append(objs, &obj)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
-	return objs, rows.Err()
+	return objs, nil
 }
 
 // DeleteAll implements storage.Transaction interface.

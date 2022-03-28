@@ -28,7 +28,7 @@ type LikeBackend struct {
 	SkipFilters []params.Operator
 }
 
-// BehavesLikeBackend contains common store behaviour
+// BehavesLikeBackend contains common store behaviour.
 func BehavesLikeBackend(link *LikeBackend) {
 	var subject storage.Backend
 	var tx storage.Transaction
@@ -275,7 +275,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		defer tx2.Rollback()
 
-		objs, err := tx2.ListAll(nil, "/objects/*", storage.ListOptions{})
+		objs, err := tx2.ListAll("/objects/*", storage.ListOptions{})
 		Ω.Expect(err).NotTo(Ω.HaveOccurred())
 		Ω.Expect(objs).To(Ω.HaveLen(100))
 
@@ -358,7 +358,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.ModTime("/objects/EPR.ID/nested/*")).To(Ω.BeNumerically(">=", d1.ModTime))
 
 		// retain deleted records
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{
 			Include: storage.IncludeAll,
 		})).To(Ω.And(
 			Ω.HaveLen(3),
@@ -397,20 +397,20 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.Create("/others/*", &schema.Object{})).To(Ω.Succeed())
 
 		// only accept node paths
-		_, err := tx.ListAll(nil, "/objects/foo", storage.ListOptions{})
+		_, err := tx.ListAll("/objects/foo", storage.ListOptions{})
 		Ω.Expect(err).To(Ω.MatchError(storage.ErrInvalidPath))
 
 		// exact
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{})).To(Ω.HaveLen(2))
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
-		Ω.Expect(tx.ListAll(nil, "/parents/x/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
-		Ω.Expect(tx.ListAll(nil, "/parents/a/unknowns/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{})).To(Ω.HaveLen(2))
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/x/objects/*", storage.ListOptions{})).To(Ω.BeEmpty())
+		Ω.Expect(tx.ListAll("/parents/a/unknowns/*", storage.ListOptions{})).To(Ω.BeEmpty())
 
 		// limit
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{Limit: 1})).To(Ω.HaveLen(1))
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{Limit: 1})).To(Ω.HaveLen(1))
 
 		// conditions
-		Ω.Expect(tx.ListAll(nil, "/parents/a/objects/*", storage.ListOptions{Condition: params.Condition{
+		Ω.Expect(tx.ListAll("/parents/a/objects/*", storage.ListOptions{Condition: params.Condition{
 			params.ParseFilter("has_x", "true"),
 		}})).To(Ω.HaveLen(1))
 	})
@@ -486,7 +486,7 @@ func BehavesLikeBackend(link *LikeBackend) {
 		Ω.Expect(tx.ModTime("/objects/*")).To(Ω.Equal(modTime2))
 
 		// retain deleted records
-		Ω.Expect(tx.ListAll(nil, "/objects/*", storage.ListOptions{
+		Ω.Expect(tx.ListAll("/objects/*", storage.ListOptions{
 			Include: storage.IncludeAll,
 		})).To(Ω.And(
 			Ω.HaveLen(4),

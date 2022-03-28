@@ -287,7 +287,7 @@ func (t *transaction) Delete(path riposo.Path) (*schema.Object, error) {
 }
 
 // ListAll implements Transaction interface.
-func (t *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
+func (t *transaction) ListAll(path riposo.Path, opt storage.ListOptions) ([]*schema.Object, error) {
 	if !path.IsNode() {
 		return nil, storage.ErrInvalidPath
 	}
@@ -297,6 +297,7 @@ func (t *transaction) ListAll(objs []*schema.Object, path riposo.Path, opt stora
 
 	ns, _ := path.Split()
 
+	var objs []*schema.Object
 	t.b.tree.Each(ns, opt.Condition, func(obj *schema.Object) {
 		objs = append(objs, obj)
 	})

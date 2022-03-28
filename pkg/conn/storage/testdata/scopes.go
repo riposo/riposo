@@ -63,5 +63,5 @@ func SortScope(tx storage.Transaction, order string) ([]string, error) {
 
 // ListScope applies options to a ListAll query and returns the IDs.
 func ListScope(tx storage.Transaction, opt storage.ListOptions) ([]string, error) {
-	return mapObjectIDs(tx.ListAll(nil, "/objects/*", opt))
+	return mapObjectIDs(tx.ListAll("/objects/*", opt))
 }

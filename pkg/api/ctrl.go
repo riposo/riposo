@@ -374,7 +374,7 @@ var emptyObjects = []*schema.Object{}
 
 func (c *controller) paginate(out http.Header, req *request, params *params.Params, nonce string) ([]*schema.Object, error) {
 	// TODO: add back pooling?
-	objs, err := req.Txn.Store.ListAll(nil, req.Path, storage.ListOptions{
+	objs, err := req.Txn.Store.ListAll(req.Path, storage.ListOptions{
 		Condition:  params.Condition,
 		Pagination: params.Token.Conditions(),
 		Sort:       params.Sort,
