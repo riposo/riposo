@@ -1,5 +1,3 @@
-run:
-  go: '1.17'
 linters:
   enable-all: true
   disable:
@@ -10,6 +8,7 @@ linters:
     - errname
     - exhaustive
     - exhaustivestruct
+    - exhaustruct
     - forcetypeassert
     - funlen
     - gci
@@ -23,12 +22,15 @@ linters:
     - gofumpt
     - golint
     - gomnd
+    - ifshort
     - interfacer
     - ireturn
     - lll
     - maligned
     - nakedret
     - nlreturn
+    - nolintlint
+    - nonamedreturns
     - paralleltest
     - scopelint
     - tagliatelle
