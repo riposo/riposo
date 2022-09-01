@@ -11,50 +11,34 @@ jobs:
   riposo:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Checkout CMD
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           path: cmd
           repository: riposo/cmd
           token: ${{ secrets.PAT }}
-      - name: Setup Go
-        uses: actions/setup-go@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: '^1.x'
-      - name: Setup ruby
-        uses: ruby/setup-ruby@v1
+          cache: true
+      - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
           bundler-cache: true
-      - name: Cache modules
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Build server
-        working-directory: cmd
+      - working-directory: cmd
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           ./build.sh --plugins accounts@7a93231,flush@7caf66c --source ../ -o ../riposo
-      - name: Start server
-        run: |
+      - run: |
           ./riposo server &
         env:
           # prettier-ignore
           RIPOSO_PERMISSION_DEFAULTS: '{"account:create":[system.Everyone], "bucket:create":[system.Authenticated]}'
           RIPOSO_PLUGINS: accounts,flush
-      - name: Run tests
-        run: bundle exec rspec -fd
+      - run: bundle exec rspec -fd
   kinto:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ruby-version: ['3.1']
     services:
       kinto:
         image: kinto/kinto-server:latest
@@ -64,12 +48,9 @@ jobs:
         ports:
           - 8888:8888
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup ruby
-        uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: '3.1'
           bundler-cache: true
-      - name: Run tests
-        run: bundle exec rspec -fd
+      - run: bundle exec rspec -fd

@@ -1,7 +1,8 @@
 package storage
 
 // Placeholders:
-//   $1 - path
+//
+//	$1 - path
 const sqlGetModTime = `
 SELECT last_modified
 FROM storage_timestamps
@@ -9,8 +10,9 @@ WHERE path = $1
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
+//
+//	$1 - path
+//	$2 - id
 const sqlExistsObject = `
 SELECT TRUE
 FROM storage_objects
@@ -21,8 +23,9 @@ LIMIT 1
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
+//
+//	$1 - path
+//	$2 - id
 const sqlGetObject = `
 SELECT last_modified, data
 FROM storage_objects
@@ -32,8 +35,9 @@ WHERE path = $1
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
+//
+//	$1 - path
+//	$2 - id
 const sqlGetObjectForUpdate = `
 SELECT last_modified, data
 FROM storage_objects
@@ -44,9 +48,10 @@ FOR UPDATE
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
-//   $3 - data
+//
+//	$1 - path
+//	$2 - id
+//	$3 - data
 const sqlCreateObject = `
 INSERT INTO storage_objects (
   path,
@@ -70,9 +75,10 @@ RETURNING last_modified
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
-//   $3 - data
+//
+//	$1 - path
+//	$2 - id
+//	$3 - data
 const sqlUpdateObject = `
 INSERT INTO storage_objects (
   path,
@@ -96,8 +102,9 @@ RETURNING last_modified
 `
 
 // Placeholders:
-//   $1 - path
-//   $2 - id
+//
+//	$1 - path
+//	$2 - id
 const sqlDeleteObject = `
 UPDATE storage_objects
   SET deleted = TRUE
@@ -108,7 +115,8 @@ RETURNING last_modified, data
 `
 
 // Placeholders:
-//   $1 - path pattern
+//
+//	$1 - path pattern
 const sqlDeleteObjectNested = `
 UPDATE storage_objects
   SET deleted = TRUE
@@ -117,8 +125,9 @@ AND NOT deleted
 `
 
 // Placeholders:
-//   $1 - deleteAll?
-//   $2 - olderThan
+//
+//	$1 - deleteAll?
+//	$2 - olderThan
 const sqlPurgeObjects = `
 DELETE FROM storage_objects
 WHERE deleted

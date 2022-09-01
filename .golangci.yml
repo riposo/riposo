@@ -1,15 +1,15 @@
-run:
-  go: '1.17'
 linters:
   enable-all: true
   disable:
     - containedctx
     - contextcheck
     - cyclop
+    - deadcode
     - dupl
     - errname
     - exhaustive
     - exhaustivestruct
+    - exhaustruct
     - forcetypeassert
     - funlen
     - gci
@@ -23,15 +23,22 @@ linters:
     - gofumpt
     - golint
     - gomnd
+    - ifshort
+    - interfacebloat
     - interfacer
     - ireturn
     - lll
     - maligned
     - nakedret
     - nlreturn
+    - nolintlint
+    - nonamedreturns
+    - nosnakecase
     - paralleltest
     - scopelint
+    - structcheck
     - tagliatelle
+    - varcheck
     - varnamelen
     - wrapcheck
     - wsl

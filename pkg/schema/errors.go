@@ -44,6 +44,7 @@ func InternalError(err error) *Error {
 }
 
 // BadRequest generates an Error.
+//
 //nolint:errorlint
 func BadRequest(err error) *Error {
 	if errors.Is(err, gzip.ErrHeader) || errors.Is(err, gzip.ErrChecksum) {
